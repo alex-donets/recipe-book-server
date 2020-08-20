@@ -1,0 +1,24 @@
+{
+  "name": "recipe-book",
+  "version": "1.0.0",
+  "description": "Recipe Book",
+  "main": "main_app.js",
+  "scripts": {
+    "start": "nodemon main_app"
+  },
+  "dependencies": {
+    "bcryptjs": "*",
+    "body-parser": "*",
+    "cors": "*",
+    "express": "*",
+    "jsonwebtoken": "*",
+    "mongoose": "*",
+    "multer": "^1.4.2",
+    "nodemon": "^2.0.4",
+    "passport": "*",
+    "passport-jwt": "*",
+    "uuid": "^8.1.0"
+  },
+  "author": "",
+  "license": "ISC"
+}

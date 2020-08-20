@@ -1,0 +1,12 @@
+docker run -it -p 27017:27017 --name recipe-mongo mongo
+docker run -it -p 8080:8080 -p 3000:3000 --link recipe-mongo -v /mnt/Data/Projects/RecipeBook/Src/recipe:/app --name recipe-node node
+
+docker exec -it ec-node /bin/bash
+
+
+# In ec-node
+npm i -g @angular/cli
+npm i -g nodemon
+
+cd /app
+ng serve --host 0.0.0.0 --poll 1000
