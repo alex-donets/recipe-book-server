@@ -1,6 +1,6 @@
 module.exports = {
-    clientAppURL: 'https://localhost:3000',
-    serverAppURL: 'https://localhost:8080',
+    clientAppURL: 'http://localhost:3000',
+    serverAppURL: 'http://localhost:8080',
 
     authSecret: '+t|8d0Y!74cwD=vUkwip!QmmSy!Lb@+x',
 

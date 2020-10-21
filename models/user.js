@@ -3,10 +3,7 @@ const bcrypt = require('bcryptjs');
 const config = require('../config/config');
 
 const UserSchema = mongoose.Schema({
-  firstName: {
-    type: String
-  },
-  lastName: {
+  fullName: {
     type: String
   },
   email: {
@@ -19,7 +16,11 @@ const UserSchema = mongoose.Schema({
   },
   role: {
     type: String,
-    default: 'customer'
+    default: 'user'
+  },
+  agreeTaC: {
+    type: Boolean,
+    required: true
   },
   regDate: String,
 }, {collection: config.dbPrefix + 'users'});
@@ -31,8 +32,7 @@ const User = module.exports = mongoose.model('User', UserSchema);
 function userToUserInfo(user) {
   return {
     _id: user._id,
-    firstName: user.firstName,
-    lastName: user.lastName,
+    username: user.username,
     email: user.email,
   };
 }
@@ -42,8 +42,7 @@ function userToUserInfo(user) {
 function customerInfo(user) {
   return {
     _id: user._id,
-    firstName: user.firstName,
-    lastName: user.lastName,
+    name: user.name,
     email: user.email,
     role: user.role
   };
@@ -52,8 +51,7 @@ function customerInfo(user) {
 function toUserUpdate(data) {
   return {
     _id: data._id,
-    firstName: data.firstName,
-    lastName: data.lastName,
+    name: data.name,
     email: data.email,
   };
 }
@@ -67,7 +65,7 @@ module.exports.getUserByEmail = function (email, callback) {
   User.findOne(query, callback);
 };
 
-module.exports.addUser = function (newUser, callback) {
+module.exports.createUser = function (newUser, callback) {
 
   this.getUserByEmail(newUser.email, (err, user) => {
     if (user != null) {
@@ -167,6 +165,6 @@ module.exports.findUsersByOption = function (value, option, callback) {
   const regex = value.trim().replace('+', '') ;
   const query = { [option]: { $regex: new RegExp(regex, "i") } };
 
-  User.find(query, `firstName lastName email ${option}`, callback);
+  User.find(query, `name email ${option}`, callback);
 };
 

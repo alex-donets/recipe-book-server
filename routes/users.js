@@ -6,14 +6,13 @@ const config = require('../config/config');
 const User = require('../models/user');
 const PassReset = require('../models/passreset');
 
-
 router.post('/register', (req, res, next) => {
 
   let newUser = new User({
-    firstName: req.body.firstName,
-    lastName: req.body.lastName,
+    fullName: req.body.fullName,
     email: req.body.email.toLowerCase(),
     password: req.body.password,
+    agreeTaC: req.body.agreeTaC,
     regDate: (new Date()).toISOString(),
   });
 
@@ -21,15 +20,15 @@ router.post('/register', (req, res, next) => {
     if (err) {
       res.json({ success: false, msg: 'User registration failed'});
     } else if (!user) {
-      User.addUser(newUser, (err, user) => {
+      User.createUser(newUser, (err, user) => {
         if (err) {
-          return res.json({ success: false, msg: 'Registeration failed: ' + err });
+          return res.status(403).json({ success: false, msg: 'Registration failed: ' + err });
         }
 
         return res.json({ success: true, msg: 'User registered', user: user });
       });
     } else {
-      res.json({ success: false, msg: 'User registration failed, email already in use'});
+      res.status(403).json({ success: false, msg: 'User registration failed, email already in use'});
     }
   });
 });
@@ -39,8 +38,7 @@ router.post('/register', (req, res, next) => {
 router.post('/update', passport.authenticate('user-rule', { session: false }), (req, res, next) => {
   let newUser = new User({
     _id: req.body._id,
-    firstName: req.body.firstName,
-    lastName: req.body.lastName,
+    name: req.body.name,
     email: req.body.email.toLowerCase(),
     password: req.body.password
   });
@@ -68,8 +66,7 @@ router.post('/update-user', passport.authenticate('admin-rule', { session: false
 
   const updatedCustomer = {
     _id: req.body._id,
-    firstName: req.body.firstName,
-    lastName: req.body.lastName,
+    name: req.body.name,
     email: req.body.email.toLowerCase(),
     phone: req.body.phone,
     address: req.body.address,
@@ -86,7 +83,7 @@ router.post('/update-user', passport.authenticate('admin-rule', { session: false
   });
 });
 
-router.post('/authenticate', (req, res, next) => {
+router.post('/login', (req, res, next) => {
   const email = req.body.email.toLowerCase();
   const password = req.body.password;
 
@@ -94,7 +91,7 @@ router.post('/authenticate', (req, res, next) => {
     if (err) {
       return res.json({ success: false, msg: err });
     } else if (!user) {
-      return res.json({ success: false, msg: 'User not found' });
+      return res.status(422).json({ msg: 'User not found' });
     }
 
     User.comparePassword(password, user.password, (err, isMatch) => {
@@ -106,19 +103,19 @@ router.post('/authenticate', (req, res, next) => {
           expiresIn: 604800 // 1 week
         });
 
-        user.cards = normalizeCards(user.cards);
         try {
           const userInfo = User.toUserInfo(user);
           res.json({
-            success: true,
-            token: 'JWT ' + token,
-            user: userInfo
+            token,
+            email: user.email,
+            fullName: user.fullName,
+            role: user.role,
           });
         } catch (err) {
-          res.json({ success: false, msg: 'Authentication failed.'});
+          res.status(401).json({ success: false, msg: 'Authentication failed.'});
         }
       } else {
-        return res.json({ success: false, msg: 'Authentication failed.' });
+        return res.status(401).json({ success: false, msg: 'Authentication failed.' });
       }
     });
   });

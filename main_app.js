@@ -25,8 +25,8 @@ const port = config.serverPort;
 
 
 app.use(cors({
-    origin: '*',
-    optionsSuccessStatus: 200
+    credentials: true,
+    origin: config.clientAppURL
 }));
 
 app.use(bodyParser.json());

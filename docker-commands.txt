@@ -3,6 +3,8 @@ docker run -it -p 8080:8080 -p 3000:3000 --link recipe-mongo -v /mnt/Data/Projec
 
 docker exec -it ec-node /bin/bash
 
+sudo docker container start /recipe-mongo
+
 
 # In ec-node
 npm i -g @angular/cli
