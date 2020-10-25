@@ -31,19 +31,3 @@ module.exports.removePhoto = function (id, callback) {
     Photo.remove({ _id: id }, callback);
 };
 
-module.exports.listNear = function (lon, lat, dist, callback) {
-    Photo.find({
-        location: {
-            $near: {
-                $maxDistance: dist,
-                $geometry: {
-                    type: "Point",
-                    coordinates: [lon, lat]
-                }
-            }
-        }
-    }).find((error, results) => {
-        console.log("Near: ", results, error);
-        callback(error, results);
-    });
-};

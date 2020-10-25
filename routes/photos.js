@@ -22,9 +22,9 @@ router.get('/list', (req, res, next) => {
     });
 });
 
-router.get('/get/id/:photoid', (req, res) => {
+router.get('/get/:id', (req, res) => {
     // console.log(req.params);
-    Photo.getPhotoById(req.params.photoid, (err, photo) => {
+    Photo.getPhotoById(req.params.id, (err, photo) => {
         if (err) {
             res.json({ success: false, msg: 'Failed to get photo by Id' + err });
         } else {

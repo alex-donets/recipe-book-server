@@ -91,7 +91,7 @@ router.post('/login', (req, res, next) => {
     if (err) {
       return res.json({ success: false, msg: err });
     } else if (!user) {
-      return res.status(422).json({ msg: 'User not found' });
+      return res.status(404).json({ msg: `User with email ${email} is not registered` });
     }
 
     User.comparePassword(password, user.password, (err, isMatch) => {
@@ -104,7 +104,6 @@ router.post('/login', (req, res, next) => {
         });
 
         try {
-          const userInfo = User.toUserInfo(user);
           res.json({
             token,
             email: user.email,
@@ -112,10 +111,10 @@ router.post('/login', (req, res, next) => {
             role: user.role,
           });
         } catch (err) {
-          res.status(401).json({ success: false, msg: 'Authentication failed.'});
+          res.status(401).json({ success: false, msg: 'Login failed. Please check email/password and try again'});
         }
       } else {
-        return res.status(401).json({ success: false, msg: 'Authentication failed.' });
+        return res.status(401).json({ success: false, msg: 'Login failed. Please check email/password and try again' });
       }
     });
   });
