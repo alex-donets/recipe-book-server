@@ -58,9 +58,8 @@ app.use((err, req, res, next) => {
     } else {
         console.error(err);
     }
-    //TODO return error http status codes
     const status = err.status ? err.status : 200;
-    res.status(status).json({ success: false, msg: err });
+    res.status(status).json({ msg: err.message });
 });
 
 

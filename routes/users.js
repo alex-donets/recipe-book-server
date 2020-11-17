@@ -20,15 +20,15 @@ router.post('/register', (req, res, next) => {
     if (err) {
       res.json({ success: false, msg: 'User registration failed'});
     } else if (!user) {
-      User.createUser(newUser, (err, user) => {
+      User.createUser(newUser, (err) => {
         if (err) {
-          return res.status(403).json({ success: false, msg: 'Registration failed: ' + err });
+          return res.status(403).json({ msg: 'Registration failed: ' + err.message });
         }
 
-        return res.json({ success: true, msg: 'User registered', user: user });
+        return res.status(200).json({ msg: 'User registered' });
       });
     } else {
-      res.status(403).json({ success: false, msg: 'User registration failed, email already in use'});
+      res.status(403).json({ msg: 'User registration failed, email already in use'});
     }
   });
 });
@@ -50,35 +50,6 @@ router.post('/update', passport.authenticate('user-rule', { session: false }), (
       User.updateUser(newUser).then((user) => {
         res.json({success: true, user: user});
       }).catch(next);
-    }
-  });
-});
-
-// Update user profile for admin
-
-router.post('/update-user', passport.authenticate('admin-rule', { session: false }), (req, res, next) => {
-  if (req.user._id.equals(req.body._id)) {
-    return res.json({ success: false, msg: 'Admin cannot update own profile from this page.' });
-  }
-  if (req.body.role === 'Admin') {
-    return res.json({ success: false, msg: 'Customer\'s role can\'t be changed to "Admin".' });
-  }
-
-  const updatedCustomer = {
-    _id: req.body._id,
-    name: req.body.name,
-    email: req.body.email.toLowerCase(),
-    phone: req.body.phone,
-    address: req.body.address,
-    role: req.body.role,
-    notes: req.body.notes
-  };
-
-  User.updateCustomer(updatedCustomer, (err, customer) => {
-    if (err) {
-      res.json({ success: false, msg: 'Customer profile has NOT been updated.' + err.msg });
-    } else {
-      res.json({ success: true, msg: 'Customer profile has been updated.' });
     }
   });
 });

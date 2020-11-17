@@ -33,15 +33,12 @@ module.exports.getCategoryByName = function (dishName, callback) {
     Category.findOne(query, callback);
 };
 
-module.exports.saveCategory = function (newCategory, callback) {
-    // newCategory.save(callback);
+module.exports.updateCategory = function (newCategory, callback) {
+    Category.findByIdAndUpdate({ _id: newCategory._id }, newCategory, {new: true}, callback);
+};
 
-    // https://stackoverflow.com/a/7855281/1119611
-    let upsertData = newCategory.toObject();
-    delete upsertData._id;
-    delete upsertData.__v;
-
-    Category.update({ _id: newCategory._id }, upsertData, { upsert: true }, callback);
+module.exports.createCategory = function (newCategory, callback) {
+    Category.create(newCategory, callback);
 };
 
 module.exports.removeCategory = function (id, callback) {
