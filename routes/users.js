@@ -4,7 +4,8 @@ const passport = require('passport');
 const jwt = require('jsonwebtoken');
 const config = require('../config/config');
 const User = require('../models/user');
-const PassReset = require('../models/passreset');
+const { sendResetPassEmail } = require('../services/email-reset-pass.service');
+const jwt_decode = require('jwt-decode');
 
 router.post('/register', (req, res, next) => {
 
@@ -32,8 +33,6 @@ router.post('/register', (req, res, next) => {
     }
   });
 });
-
-// Update profile for common users
 
 router.post('/update', passport.authenticate('user-rule', { session: false }), (req, res, next) => {
   let newUser = new User({
@@ -67,7 +66,7 @@ router.post('/login', (req, res, next) => {
 
     User.comparePassword(password, user.password, (err, isMatch) => {
       if (err) {
-        return res.json({ success: false, msg: err });
+        return res.status(401).json({ msg: err });
       }
       if (isMatch) {
         const token = jwt.sign({ data: user }, config.authSecret, {
@@ -82,17 +81,17 @@ router.post('/login', (req, res, next) => {
             role: user.role,
           });
         } catch (err) {
-          res.status(401).json({ success: false, msg: 'Login failed. Please check email/password and try again'});
+          res.status(401).json({ msg: 'Login failed. Please check email/password and try again'});
         }
       } else {
-        return res.status(401).json({ success: false, msg: 'Login failed. Please check email/password and try again' });
+        return res.status(401).json({ msg: 'Login failed. Please check email/password and try again' });
       }
     });
   });
 });
 
-router.post('/forgot', (req, res, next) => {
-  const email = req.body.email.toLowerCase();
+router.post('/reset-password', (req, res, next) => {
+  const email = req.body.email;
 
   User.getUserByEmail(email, (err, user) => {
     if (err) {
@@ -102,56 +101,39 @@ router.post('/forgot', (req, res, next) => {
       return res.json({ success: false, msg: 'User not found' });
     }
 
-    let newPassReset = new PassReset({
-      datetime: (new Date()).toISOString(),
-      ip: req.headers['x-forwarded-for'] || req.connection.remoteAddress,
-      email: email
-    });
-    PassReset.addPassReset(newPassReset, (err, passreset) => {
-      if (err) {
-        return res.json({ success: false, msg: err });
-      }
-
-      sendEmail(email, 'EatClick password reset', '',
-        `Hi,<br>
-        We received a password reset request for your account.<br>
-        If it was you, please click on the following link to go to change password page, 
-        otherwise just ignore it.<br>
-        <br>
-        <a href='${config.eatClickURL}/user/passreset/${passreset.upserted[0]._id}'><strong>Reset Password</strong></a>`,
-        (result) => {
-          return res.json(result);
-        }
-      );
+    const token = jwt.sign({ data: user }, config.authSecret, {
+      expiresIn: 604800 // 1 week
     });
 
+    sendResetPassEmail(email, token);
+    res.status(200).json({ msg: "Reset password email has been sent" });
   });
 });
 
-router.post('/pass-reset', (req, res, next) => {
-  const key = req.body.key;
-  const email = req.body.email.toLowerCase();
+router.post('/set-password', (req, res, next) => {
+  const clientKey = req.body.key;
+  const serverKey = process.env.AUTH_SECRET_KEY;
   const password = req.body.password;
 
-  PassReset.getPassResetById(key, (err, passreset) => {
-    if (err) {
-      return res.json({ success: false, msg: 'Invalid key: ' + err });
-    }
-    if (passreset.email != email) {
-      return res.json({ success: false, msg: 'Invalid email address' });
-    }
-    User.resetPassword(email, password, (err) => {
+  if (clientKey !== serverKey) {
+    res.status(403).json({ msg: 'Secret keys don\'t match' });
+  }
+
+  if (!req.body.token) {
+    res.status(403).json({ msg: 'User token is not provided' });
+  }
+
+  const token = jwt_decode(req.body.token);
+  if (token) {
+    const { data } = token;
+
+    User.resetPassword(data.email, password, (err) => {
       if (err) {
-        return res.json({ success: false, msg: 'Reset failed: ' + err });
+        return res.status(403).json({ msg: 'Reset password failed: ' + err });
       }
-      PassReset.removePassReset(passreset._id, (err) => {
-        if (err) {
-          return res.json({ success: false, msg: 'Reset failed: ' + err });
-        }
-        res.json({ success: true, msg: 'Reset success.' });
-      });
+      return res.status(200).json({ msg: 'Reset password success' });
     });
-  });
+  }
 });
 
 router.get('/info', passport.authenticate('user-rule', { session: true }), (req, res, next) => {
@@ -165,9 +147,9 @@ router.post('/find', passport.authenticate('admin-rule', { session: true }), (re
   try {
     User.findUsersByOption(req.body.name, req.body.query, (err, users) => {
       if (err) {
-        res.json({ success: false, msg: err });
+        res.json({ msg: err });
       } else {
-        res.json({ success: true, list: users });
+        res.json({ list: users });
       }
     });
   } catch (e) {
@@ -179,7 +161,7 @@ router.post('/find', passport.authenticate('admin-rule', { session: true }), (re
 router.get('/:id', passport.authenticate('admin-rule', { session: true }), (req, res, next) => {
   try {
     User.customerInfoById(req.params.id).then((userInfo)=> {
-      res.status(200).json({success: true, user: userInfo});
+      res.status(200).json({ success: true, user: userInfo });
     }).catch(next);
   } catch (e) {
     console.log("Failed to get users: " + e);

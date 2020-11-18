@@ -7,11 +7,14 @@
     "start": "nodemon main_app"
   },
   "dependencies": {
+    "@sendgrid/mail": "^7.4.0",
     "bcryptjs": "*",
     "body-parser": "*",
     "cors": "*",
+    "dotenv": "^8.2.0",
     "express": "*",
     "jsonwebtoken": "*",
+    "jwt-decode": "^3.1.2",
     "lodash": "^4.17.20",
     "mongoose": "*",
     "multer": "^1.4.2",
