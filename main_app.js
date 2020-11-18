@@ -24,12 +24,11 @@ mongoose.connection.on('error', (err) => {
 
 
 const app = express();
-const port = config.serverPort;
-
+const port = process.env.SERVER_PORT;
 
 app.use(cors({
     credentials: true,
-    origin: config.clientAppURL
+    origin: process.env.WEB_APP_URL
 }));
 
 app.use(bodyParser.json());
@@ -52,7 +51,7 @@ require('./config/passport')(passport);
 require('./routes')(app);
 
 app.get('*', (req, res) => {
-    res.redirect(`${config.clientAppURL}`);
+    res.redirect(`${process.env.WEB_APP_URL}`);
 });
 
 app.use((err, req, res, next) => {

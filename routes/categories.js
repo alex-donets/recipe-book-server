@@ -97,7 +97,6 @@ router.post('/update/:id', upload.single('file'), (req, res) => {
                     res.status(400).json({ msg: 'Failed to update category: ' + err.message });
                 } else {
                     const { _id, photo, name } = category;
-                    console.log('upd')
                     res.status(200).json({ _id, photo, name });
                 }
             });

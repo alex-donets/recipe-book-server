@@ -47,4 +47,3 @@ src/logs/api.log
 uploads/*
 
 /.env
-sendgrid.env

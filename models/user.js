@@ -121,6 +121,7 @@ module.exports.comparePassword = function (candidatePassword, hash, callback) {
 };
 
 module.exports.isAdmin = function (user) {
+  console.log('user', user)
   return (user.role === "admin");
 };
 

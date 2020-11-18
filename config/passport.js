@@ -7,7 +7,7 @@ module.exports = function(passport) {
   
   let opts = {};
   opts.jwtFromRequest = ExtractJwt.fromAuthHeaderWithScheme('jwt');
-  opts.secretOrKey = config.authSecret;
+  opts.secretOrKey = process.env.AUTH_SECRET_KEY;
 
   passport.use('admin-rule', new JwtStrategy(opts, (jwt_payload, done) => {
     User.getUserById(jwt_payload.data._id, (err, user) => {

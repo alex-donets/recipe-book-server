@@ -69,7 +69,7 @@ router.post('/login', (req, res, next) => {
         return res.status(401).json({ msg: err });
       }
       if (isMatch) {
-        const token = jwt.sign({ data: user }, config.authSecret, {
+        const token = jwt.sign({ data: user }, process.env.AUTH_SECRET_KEY, {
           expiresIn: 604800 // 1 week
         });
 
@@ -101,7 +101,7 @@ router.post('/reset-password', (req, res, next) => {
       return res.json({ success: false, msg: 'User not found' });
     }
 
-    const token = jwt.sign({ data: user }, config.authSecret, {
+    const token = jwt.sign({ data: user }, process.env.AUTH_SECRET_KEY, {
       expiresIn: 604800 // 1 week
     });
 
