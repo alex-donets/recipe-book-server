@@ -28,8 +28,8 @@ module.exports.getCategoryPhotoById = function (id, callback) {
     Category.findById(id, 'photo', callback);
 };
 
-module.exports.getCategoryByName = function (dishName, callback) {
-    const query = { name: dishName };
+module.exports.getCategoryByName = function (category, callback) {
+    const query = { name: category };
     Category.findOne(query, callback);
 };
 
