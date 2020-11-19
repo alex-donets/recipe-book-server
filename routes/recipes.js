@@ -12,9 +12,9 @@ const upload = multer({
 });
 
 router.get('/', (req, res, next) => {
-    Recipe.getAllCategories((err, recipeList) => {
+    Recipe.getAllRecipes((err, recipeList) => {
         if (err) {
-            res.status(400).json({ msg: 'Failed to get categories - ' + err });
+            res.status(400).json({ msg: 'Failed to get recipes - ' + err });
         } else {
             res.json(recipeList);
         }
@@ -22,9 +22,9 @@ router.get('/', (req, res, next) => {
 });
 
 router.get('/data', (req, res, next) => {
-    Recipe.getAllCategories((err, dataList) => {
+    Recipe.getAllRecipes((err, dataList) => {
         if (err) {
-            res.status(400).json({ msg: 'Failed to get categories - ' + err });
+            res.status(400).json({ msg: 'Failed to get recipes - ' + err });
         } else {
             res.json(dataList);
         }
@@ -84,6 +84,7 @@ router.post('/update/:id', upload.single('file'), (req, res) => {
             let newRecipe = new Recipe({
                 name: req.body.name,
                 userId: req.body.userId,
+                categoryId: req.body.categoryId,
                 ingredients: req.body.ingredients,
                 _id: req.params.id
             });

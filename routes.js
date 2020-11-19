@@ -5,6 +5,7 @@ const home = require('./routes/home');
 const photos = require('./routes/photos');
 const users = require('./routes/users');
 const categories = require('./routes/categories');
+const recipes = require('./routes/recipes');
 
 module.exports = function (app) {
 
@@ -14,4 +15,5 @@ module.exports = function (app) {
     app.use('/photos', photos);
     app.use('/users', users);
     app.use('/categories', categories);
+    app.use('/recipes', recipes);
 };

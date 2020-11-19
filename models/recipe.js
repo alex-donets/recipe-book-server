@@ -10,6 +10,10 @@ const RecipeSchema = mongoose.Schema({
         type: String,
         required: true
     },
+    categoryId: {
+        type: String,
+        required: true
+    },
     photo: {
         data: Buffer,
         contentType: String,
@@ -29,8 +33,8 @@ module.exports.getRecipeById = function (id, callback) {
     return Recipe.findById(id, callback);
 };
 
-module.exports.getRecipePhotoById = function (id, callback) {
-    Recipe.findById(id, 'photo', callback);
+module.exports.getRecipeByCategoryId = function (id, callback) {
+    Recipe.findById(id, 'categoryId', callback);
 };
 
 module.exports.getRecipeByName = function (recipe, callback) {
@@ -50,7 +54,7 @@ module.exports.removeRecipe = function (id, callback) {
     Recipe.remove({_id: id}, callback);
 };
 
-module.exports.getCategoriesByIds = function (ids) {
+module.exports.getRecipesByIds = function (ids) {
     return Recipe.find({
         _id: {
             $in: ids
