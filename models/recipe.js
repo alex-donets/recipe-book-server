@@ -21,6 +21,10 @@ const RecipeSchema = mongoose.Schema({
         size: Number,
     },
     ingredients: [],
+    directions: {
+        type: String,
+        required: true
+    },
 }, { collection: config.dbPrefix + 'recipes' });
 
 const Recipe = module.exports = mongoose.model('Recipe', RecipeSchema);
@@ -40,6 +44,15 @@ module.exports.getRecipeByCategoryId = function (id, callback) {
 module.exports.getRecipeByName = function (recipe, callback) {
     const query = { name: recipe };
     Recipe.findOne(query, callback);
+};
+
+module.exports.getRecipesByCategoryId = function (categoryId, callback) {
+    const query = { categoryId: categoryId };
+    Recipe.find(query, callback);
+};
+
+module.exports.getRecipePhotoById = function (id, callback) {
+    Recipe.findById(id, 'photo', callback);
 };
 
 module.exports.updateRecipe = function (newRecipe, callback) {

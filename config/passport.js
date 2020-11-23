@@ -41,7 +41,6 @@ module.exports = function(passport) {
     const sessionUser = {
       _id: user._id,
       email: user.email,
-      phone: user.phone
     };
 
     done(null, sessionUser);
@@ -51,5 +50,4 @@ module.exports = function(passport) {
     done(null, user);
   });
 };
-
 

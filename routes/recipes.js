@@ -2,6 +2,7 @@ const express = require('express');
 const multer = require('multer');
 const fs = require('fs');
 const passport = require('passport');
+const jwt_decode = require('jwt-decode');
 
 const router = express.Router();
 
@@ -21,8 +22,8 @@ router.get('/', (req, res, next) => {
     });
 });
 
-router.get('/data', (req, res, next) => {
-    Recipe.getAllRecipes((err, dataList) => {
+router.get('/:id', (req, res, next) => {
+    Recipe.getRecipesByCategoryId(req.params.id, (err, dataList) => {
         if (err) {
             res.status(400).json({ msg: 'Failed to get recipes - ' + err });
         } else {
@@ -53,7 +54,9 @@ router.post('/add', upload.single('file'), (req, res) => {
             let newRecipe = new Recipe({
                 name: req.body.name,
                 userId: req.body.userId,
+                categoryId: req.body.categoryId,
                 ingredients: req.body.ingredients,
+                directions: req.body.directions
             });
 
             if (req.file) {
