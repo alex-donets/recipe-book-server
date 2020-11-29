@@ -117,11 +117,11 @@ router.post('/set-password', (req, res, next) => {
   const password = req.body.password;
 
   if (clientKey !== serverKey) {
-    res.status(403).json({ msg: 'Secret keys don\'t match' });
+    return res.status(403).json({ msg: 'Secret keys don\'t match' });
   }
 
   if (!req.body.token) {
-    res.status(403).json({ msg: 'User token is not provided' });
+    return res.status(403).json({ msg: 'User token is not provided' });
   }
 
   const token = jwt_decode(req.body.token);
