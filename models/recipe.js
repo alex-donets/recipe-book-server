@@ -46,7 +46,7 @@ module.exports.getRecipeByName = function (recipe, callback) {
     Recipe.findOne(query, callback);
 };
 
-module.exports.getRecipesByCategoryId = function (categoryId, callback) {
+module.exports.getRecipeByCategoryId = function (categoryId, callback) {
     const query = { categoryId: categoryId };
     Recipe.find(query, callback);
 };

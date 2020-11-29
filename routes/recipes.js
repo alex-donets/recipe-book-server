@@ -23,7 +23,17 @@ router.get('/', (req, res, next) => {
 });
 
 router.get('/:id', (req, res, next) => {
-    Recipe.getRecipesByCategoryId(req.params.id, (err, dataList) => {
+    Recipe.getRecipeByCategoryId(req.params.id, (err, dataList) => {
+        if (err) {
+            res.status(400).json({ msg: 'Failed to get recipes - ' + err });
+        } else {
+            res.json(dataList);
+        }
+    });
+});
+
+router.get('/get/:id', (req, res, next) => {
+    Recipe.getRecipeById(req.params.id, (err, dataList) => {
         if (err) {
             res.status(400).json({ msg: 'Failed to get recipes - ' + err });
         } else {
@@ -89,6 +99,7 @@ router.post('/update/:id', upload.single('file'), (req, res) => {
                 userId: req.body.userId,
                 categoryId: req.body.categoryId,
                 ingredients: req.body.ingredients,
+                directions: req.body.directions,
                 _id: req.params.id
             });
 
@@ -103,8 +114,8 @@ router.post('/update/:id', upload.single('file'), (req, res) => {
                 if (err) {
                     res.status(400).json({ msg: 'Failed to update recipe: ' + err.message });
                 } else {
-                    const { _id, photo, name } = recipe;
-                    res.status(200).json({ _id, photo, name });
+                    const { _id, photo, name, directions } = recipe;
+                    res.status(200).json({ _id, photo, name, directions });
                 }
             });
         }
