@@ -37,8 +37,12 @@ router.get('/get/photo/:id', (req, res) => {
         if (err) {
             res.status(400).json({ msg: 'Failed to get photo by Id' + err });
         } else {
-            res.writeHead(200, { 'Content-Type': 'image/jpeg' });
-            res.end(photo.photo.data, 'binary');
+            if (photo) {
+                res.writeHead(200, { 'Content-Type': 'image/jpeg' });
+                res.end(photo.photo.data, 'binary');
+            } else {
+                res.json({ msg: 'Photo doesn\'t exist' });
+            }
         }
     });
 });

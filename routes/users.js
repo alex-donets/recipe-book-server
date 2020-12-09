@@ -8,6 +8,11 @@ const { sendResetPassEmail } = require('../services/email-reset-pass.service');
 const jwt_decode = require('jwt-decode');
 
 router.post('/register', (req, res, next) => {
+  let role = 'user';
+
+  if(req.body.email === process.env.TEST_ADMIN_EMAIL) {
+    role = 'admin';
+  }
 
   let newUser = new User({
     fullName: req.body.fullName,
@@ -15,6 +20,7 @@ router.post('/register', (req, res, next) => {
     password: req.body.password,
     agreeTaC: req.body.agreeTaC,
     regDate: (new Date()).toISOString(),
+    role: role,
   });
 
   User.getUserByEmail(newUser.email,(err, user) => {
@@ -134,6 +140,23 @@ router.post('/set-password', (req, res, next) => {
       }
       return res.status(200).json({ msg: 'Reset password success' });
     });
+  }
+});
+
+router.delete('/delete', (req, res, next) => {
+  if (
+    req.body.email === process.env.TEST_ADMIN_EMAIL ||
+      req.body.email === process.env.TEST_USER_EMAIL
+  ) {
+    User.removeUser(req.body.email, (err, user) => {
+      if (err) {
+        return res.status(401).json({ msg: err });
+      } else {
+        return res.json({ msg: 'User has been deleted' });
+      }
+    });
+  } else {
+    return res.status(401).json({ msg: 'Only test users can be deleted' });
   }
 });
 

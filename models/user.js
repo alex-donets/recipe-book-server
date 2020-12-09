@@ -149,6 +149,10 @@ module.exports.resetPassword = function (email, password, callback) {
   });
 };
 
+module.exports.removeUser = function (email, callback) {
+  return User.remove({ email: email }, callback);
+};
+
 module.exports.toUserInfo = function (user) {
   return userToUserInfo(user);
 };
