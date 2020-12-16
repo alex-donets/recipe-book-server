@@ -17,7 +17,7 @@ router.get('/', (req, res, next) => {
             res.status(400).json({ msg: 'Failed to get categories - ' + err });
         } else {
             // TODO: return base64, not a text array
-            res.json(categoryList);
+            res.status(200).json(categoryList);
         }
     });
 });

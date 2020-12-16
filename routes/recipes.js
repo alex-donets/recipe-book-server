@@ -61,11 +61,13 @@ router.post('/add', upload.single('file'), (req, res) => {
         } else if (recipe) {
             res.status(400).json({ msg: 'Recipe with the same name already exists' });
         } else {
+            const ingredients = JSON.parse(req.body.ingredients);
+
             let newRecipe = new Recipe({
                 name: req.body.name,
                 userId: req.body.userId,
                 categoryId: req.body.categoryId,
-                ingredients: req.body.ingredients,
+                ingredients: ingredients,
                 directions: req.body.directions
             });
 
@@ -80,9 +82,9 @@ router.post('/add', upload.single('file'), (req, res) => {
                 if (err) {
                     res.status(400).json({ msg: 'Failed to add recipe: ' + err });
                 } else {
-                    const { _id, photo, name } = recipe;
+                    const { _id, photo, name, ingredients, categoryId, userId, directions } = recipe;
 
-                    res.status(200).json({ _id, photo, name });
+                    res.status(200).json({ _id, photo, name, ingredients, categoryId, userId, directions });
                 }
             });
         }
@@ -94,11 +96,13 @@ router.post('/update/:id', upload.single('file'), (req, res) => {
         if (err) {
             res.status(400).json({ msg: 'Failed to update recipe: ' + err });
         } else {
+            const ingredients = JSON.parse(req.body.ingredients);
+
             let newRecipe = new Recipe({
                 name: req.body.name,
                 userId: req.body.userId,
                 categoryId: req.body.categoryId,
-                ingredients: req.body.ingredients,
+                ingredients: ingredients,
                 directions: req.body.directions,
                 _id: req.params.id
             });
@@ -114,8 +118,8 @@ router.post('/update/:id', upload.single('file'), (req, res) => {
                 if (err) {
                     res.status(400).json({ msg: 'Failed to update recipe: ' + err.message });
                 } else {
-                    const { _id, photo, name, directions } = recipe;
-                    res.status(200).json({ _id, photo, name, directions });
+                    const { _id, photo, name, ingredients, categoryId, userId, directions } = recipe;
+                    res.status(200).json({ _id, photo, name, ingredients, categoryId, userId, directions });
                 }
             });
         }
