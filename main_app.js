@@ -8,14 +8,14 @@ const dotenv = require('dotenv');
 
 dotenv.config();
 
-mongoose.connect(config.dbPath, {
+mongoose.connect(process.env.DB_PATH, {
     user: config.dbUser,
     pass: config.dbPass,
     useNewUrlParser: true
 });
 
 mongoose.connection.on('connected', () => {
-    console.log('Database connected: ' + config.dbPath);
+    console.log('Database connected: ' + process.env.DB_PATH);
 });
 
 mongoose.connection.on('error', (err) => {

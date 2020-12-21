@@ -27,7 +27,7 @@ router.get('/data', (req, res, next) => {
         if (err) {
             res.status(400).json({ msg: 'Failed to get categories - ' + err });
         } else {
-            res.json(dataList);
+            res.status(200).json(dataList);
         }
     });
 });
