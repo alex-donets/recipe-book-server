@@ -1,10 +1,12 @@
 const express = require('express');
+const http = require('http');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const passport = require('passport');
 const mongoose = require('mongoose');
 const config = require('./config/config');
 const dotenv = require('dotenv');
+const socketIo = require('socket.io');
 
 dotenv.config();
 
@@ -22,13 +24,17 @@ mongoose.connection.on('error', (err) => {
     console.log('Database error: ' + err);
 });
 
-
 const app = express();
-const port = process.env.SERVER_PORT;
+const server = http.createServer(app);
+
+const io = socketIo(server);
+
+const port = process.env.SERVER_PORT || 8080;
 
 app.use(cors({
     credentials: true,
-    origin: process.env.WEB_APP_URL
+    origin: process.env.WEB_APP_URL,
+    methods: ["GET", "POST", "PUT", "DELETE"]
 }));
 
 app.use(bodyParser.json());
@@ -42,6 +48,7 @@ app.use(passport.initialize());
  */
 
 require('./config/passport')(passport);
+require('./schedulers/schedule-list');
 
 
 /**
@@ -49,6 +56,7 @@ require('./config/passport')(passport);
  */
 
 require('./routes')(app);
+require('./routes/chat-messages.js')(io);
 
 app.get('*', (req, res) => {
     res.redirect(`${process.env.WEB_APP_URL}`);
@@ -64,7 +72,8 @@ app.use((err, req, res, next) => {
     res.status(status).json({ msg: err.message });
 });
 
-
-app.listen(port, () => {
+server.listen(port, () => {
     console.log(`Recipe-Book-App started on port ${port}`);
 });
+
+module.exports = io;

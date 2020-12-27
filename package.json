@@ -4,7 +4,8 @@
   "description": "Recipe Book",
   "main": "main_app.js",
   "scripts": {
-    "start": "nodemon main_app"
+    "start": "node main_app",
+    "dev": "nodemon main_app"
   },
   "dependencies": {
     "@sendgrid/mail": "^7.4.0",
@@ -18,9 +19,11 @@
     "lodash": "^4.17.20",
     "mongoose": "*",
     "multer": "^1.4.2",
+    "node-schedule": "^1.3.2",
     "nodemon": "^2.0.4",
     "passport": "*",
     "passport-jwt": "*",
+    "socket.io": "^3.0.4",
     "uuid": "^8.1.0"
   },
   "author": "",
