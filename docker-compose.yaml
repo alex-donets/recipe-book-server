@@ -1,9 +1,0 @@
-version: '3'
-services:
-  mongo:
-    image: mongo
-    restart: always
-    volumes:
-      - ./init.js:/docker-entrypoint-initdb.d/init.js
-    ports:
-      - ${MONGO_DB_EXTERNAL_PORT:-27017}:27017

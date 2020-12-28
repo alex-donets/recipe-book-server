@@ -1,8 +1,8 @@
 FROM node:12-alpine as builder
 
-WORKDIR /usr/src/app/client
+WORKDIR /usr/src/app
 
-COPY ./package.json ./
+COPY package*.json ./
 
 RUN npm install
 
