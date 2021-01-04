@@ -1,0 +1,39 @@
+version: "3"
+services:
+  api:
+    build: .
+    container_name: recipe-api
+    image: recipe-api
+    restart: always
+    ports:
+      - "8080:8080"
+    networks:
+      - recipe-app
+    depends_on:
+      - db
+    env_file:
+      - ./.env
+  db:
+    container_name: mongo
+    image: mongo
+    ports:
+      - "27027:27027"
+    volumes:
+      - ./data:/data/db
+    networks:
+      - recipe-app
+#  web:
+#    build: ../recipe-book-client/
+#    image: recipe-web
+#    stdin_open: true
+#    ports:
+#      - "3000:3000"
+#    networks:
+#      - recipe-app
+#    env_file:
+#      - ../recipe-book-client/.env
+#    container_name: recipe-web
+networks:
+  recipe-app:
+    driver: bridge
+

@@ -1,5 +1,7 @@
 const express = require('express');
 const http = require('http');
+const https = require('https');
+const fs = require('fs');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const passport = require('passport');
@@ -10,30 +12,43 @@ const socketIo = require('socket.io');
 
 dotenv.config();
 
-mongoose.connect(process.env.DB_PATH, {
+const app = express();
+
+const opts = {
+    key: fs.readFileSync("./key.pem"),
+    cert: fs.readFileSync("./server.crt"),
+};
+
+const devEnv = process.env.NODE_ENV === 'dev';
+const devServer = http.createServer(app);
+const prodServer = https.createServer(opts, app);
+const dbPath = devEnv ? process.env.DB_PATH_LOCAL : process.env.DB_PATH_IMAGE;
+
+mongoose.connect(dbPath, {
     user: config.dbUser,
     pass: config.dbPass,
     useNewUrlParser: true
 });
 
 mongoose.connection.on('connected', () => {
-    console.log('Database connected: ' + process.env.DB_PATH);
+    console.log('Database connected: ' + dbPath);
 });
 
 mongoose.connection.on('error', (err) => {
     console.log('Database error: ' + err);
 });
 
-const app = express();
-const server = http.createServer(app);
+const server = devEnv ? devServer : prodServer;
 
 const io = socketIo(server);
 
 const port = process.env.SERVER_PORT || 8080;
 
+const webUrl = devEnv ? process.env.WEB_APP_URL_DEV : process.env.WEB_APP_URL_PROD;
+
 app.use(cors({
     credentials: true,
-    origin: process.env.WEB_APP_URL,
+    origin: webUrl,
     methods: ["GET", "POST", "PUT", "DELETE"]
 }));
 
@@ -59,7 +74,7 @@ require('./routes')(app);
 require('./routes/chat-messages.js')(io);
 
 app.get('*', (req, res) => {
-    res.redirect(`${process.env.WEB_APP_URL}`);
+    res.redirect(`${webUrl}`);
 });
 
 app.use((err, req, res, next) => {
@@ -75,5 +90,9 @@ app.use((err, req, res, next) => {
 server.listen(port, () => {
     console.log(`Recipe-Book-App started on port ${port}`);
 });
+
+console.log('ENVIRONMENT: ', process.env.NODE_ENV);
+console.log('WEB_APP_URL: ', webUrl);
+console.log('DB_PATH: ', dbPath);
 
 module.exports = io;
