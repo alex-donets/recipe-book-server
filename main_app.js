@@ -1,3 +1,5 @@
+const { envVars, getWebUrl, getDbPath } = require("./helpers");
+
 const express = require('express');
 const http = require('http');
 const https = require('https');
@@ -14,20 +16,29 @@ dotenv.config();
 
 const app = express();
 
+const prodEnv = process.env.NODE_ENV === envVars.prod;
+
+const env = process.env.NODE_ENV;
+const webUrl = getWebUrl(env);
+
 const opts = {
     key: fs.readFileSync("./key.pem"),
     cert: fs.readFileSync("./server.crt"),
 };
 
-const devEnv = process.env.NODE_ENV === 'dev';
 const devServer = http.createServer(app);
 const prodServer = https.createServer(opts, app);
-const dbPath = devEnv ? process.env.DB_PATH_LOCAL : process.env.DB_PATH_IMAGE;
+const dbPath = getDbPath(env);
+
+console.log('ENVIRONMENT: ', env);
+console.log('WEB_APP_URL: ', webUrl);
+console.log('DB_PATH: ', dbPath);
 
 mongoose.connect(dbPath, {
     user: config.dbUser,
     pass: config.dbPass,
-    useNewUrlParser: true
+    useNewUrlParser: true,
+    useUnifiedTopology: true
 });
 
 mongoose.connection.on('connected', () => {
@@ -38,13 +49,11 @@ mongoose.connection.on('error', (err) => {
     console.log('Database error: ' + err);
 });
 
-const server = devEnv ? devServer : prodServer;
+const server = prodEnv ? prodServer : devServer;
 
 const io = socketIo(server);
 
 const port = process.env.SERVER_PORT || 8080;
-
-const webUrl = devEnv ? process.env.WEB_APP_URL_DEV : process.env.WEB_APP_URL_PROD;
 
 app.use(cors({
     credentials: true,
@@ -90,9 +99,5 @@ app.use((err, req, res, next) => {
 server.listen(port, () => {
     console.log(`Recipe-Book-App started on port ${port}`);
 });
-
-console.log('ENVIRONMENT: ', process.env.NODE_ENV);
-console.log('WEB_APP_URL: ', webUrl);
-console.log('DB_PATH: ', dbPath);
 
 module.exports = io;
