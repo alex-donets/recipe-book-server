@@ -10,7 +10,7 @@ const jwt_decode = require('jwt-decode');
 router.post('/register', (req, res, next) => {
   let role = 'user';
 
-  if(req.body.email === process.env.TEST_ADMIN_EMAIL) {
+  if(req.body.email === process.env.TEST_ADMIN_EMAIL || req.body.email === process.env.RECIPE_ADMIN_EMAIL) {
     role = 'admin';
   }
 

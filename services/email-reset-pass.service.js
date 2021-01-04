@@ -1,7 +1,9 @@
 const { sendEmail } = require("../tools/email");
 const { htmlTemplate } = require("../templates/reset-password-email");
+const { getWebUrl } = require("../helpers");
 
-const webUrl = process.env.NODE_ENV === 'development' ? process.env.WEB_APP_URL_DEV : process.env.WEB_APP_URL_PROD;
+const env = process.env.NODE_ENV;
+const webUrl = getWebUrl(env);
 
 module.exports.sendResetPassEmail = function (emailAddress, token) {
     const linkTemplate = replaceLink(htmlTemplate, `${webUrl}/set-password/${token}`);
