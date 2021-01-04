@@ -22,6 +22,17 @@ services:
       - ./data:/data/db
     networks:
       - recipe-app
+#  web:
+#    build: ../recipe-book-client/
+#    image: recipe-web
+#    stdin_open: true
+#    ports:
+#      - "3000:3000"
+#    networks:
+#      - recipe-app
+#    env_file:
+#      - ../recipe-book-client/.env
+#    container_name: recipe-web
 networks:
   recipe-app:
     driver: bridge
