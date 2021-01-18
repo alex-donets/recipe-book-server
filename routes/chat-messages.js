@@ -1,5 +1,4 @@
 const Chat = require('../models/chat');
-const User = require('../models/user');
 
 const getAllMessages = (io) => {
     Chat.getAllMessages((err, dataList) => {
@@ -27,7 +26,7 @@ const io = (io) => {
         if (!socket) {
             io.sockets.emit("errors", `Error getting connection`);
         } else {
-            console.log("New client connected: " + socket.id)
+            console.log("New client connected: " + socket.id);
 
             socket.on("get-messages", () => {
                 getAllMessages(io);
@@ -46,7 +45,7 @@ const io = (io) => {
                     timestamp,
                 });
 
-                Chat.addMessage(newMessage,(err, result) => {
+                Chat.addMessage(newMessage,(err) => {
                     if (err) {
                         io.sockets.emit("errors", `Error adding message: ${err}`);
                         console.log('error add message', err);

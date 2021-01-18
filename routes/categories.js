@@ -1,7 +1,6 @@
 const express = require('express');
 const multer = require('multer');
 const fs = require('fs');
-const passport = require('passport');
 
 const router = express.Router();
 
@@ -11,18 +10,21 @@ const upload = multer({
     dest: 'uploads/',
 });
 
-router.get('/', (req, res, next) => {
+router.get('/', (req, res) => {
     Category.getAllCategories((err, categoryList) => {
         if (err) {
             res.status(400).json({ msg: 'Failed to get categories - ' + err });
         } else {
-            // TODO: return base64, not a text array
-            res.status(200).json(categoryList);
+            const list = categoryList.map(item => ({
+                _id: item._id,
+                name: item.name
+            }));
+            res.status(200).json(list);
         }
     });
 });
 
-router.get('/data', (req, res, next) => {
+router.get('/data', (req, res) => {
     Category.getAllCategories((err, dataList) => {
         if (err) {
             res.status(400).json({ msg: 'Failed to get categories - ' + err });
@@ -80,7 +82,7 @@ router.post('/add', upload.single('file'), (req, res) => {
 });
 
 router.post('/update/:id', upload.single('file'), (req, res) => {
-    Category.getCategoryById(req.params.id, (err, category) => {
+    Category.getCategoryById(req.params.id, (err) => {
         if (err) {
             res.status(400).json({ msg: 'Failed to update category: ' + err });
         } else {

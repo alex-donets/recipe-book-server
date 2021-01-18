@@ -2,8 +2,6 @@ const { envVars, getWebUrl, getDbPath } = require("./helpers");
 
 const express = require('express');
 const http = require('http');
-const https = require('https');
-const fs = require('fs');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const passport = require('passport');
@@ -16,18 +14,10 @@ dotenv.config();
 
 const app = express();
 
-const prodEnv = process.env.NODE_ENV === envVars.prod;
-
 const env = process.env.NODE_ENV;
 const webUrl = getWebUrl(env);
 
-const opts = {
-    key: fs.readFileSync("./key.pem"),
-    cert: fs.readFileSync("./server.crt"),
-};
-
-const devServer = http.createServer(app);
-const prodServer = https.createServer(opts, app);
+const server = http.createServer(app);
 const dbPath = getDbPath(env);
 
 console.log('ENVIRONMENT: ', env);
@@ -49,11 +39,9 @@ mongoose.connection.on('error', (err) => {
     console.log('Database error: ' + err);
 });
 
-const server = prodEnv ? prodServer : devServer;
-
 const io = socketIo(server);
 
-const port = process.env.SERVER_PORT || 8080;
+const port = process.env.PORT || 8080;
 
 app.use(cors({
     credentials: true,
@@ -86,7 +74,7 @@ app.get('*', (req, res) => {
     res.redirect(`${webUrl}`);
 });
 
-app.use((err, req, res, next) => {
+app.use((err, req, res) => {
     if(err.stack) {
         console.error(err.stack);
     } else {
@@ -96,8 +84,10 @@ app.use((err, req, res, next) => {
     res.status(status).json({ msg: err.message });
 });
 
-server.listen(port, () => {
-    console.log(`Recipe-Book-App started on port ${port}`);
+const host = process.env.NODE_ENV === envVars.dev ? '' : '0.0.0.0';
+
+server.listen(port, host, () => {
+    console.log(`Recipe-Book-App started on port: ${port}, host: ${host}`);
 });
 
 module.exports = io;
