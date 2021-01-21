@@ -1,6 +1,6 @@
 const { sendEmail } = require('../tools/email');
 const { htmlTemplate } = require('../templates/reset-password-email');
-const { getWebUrl, envVars } = require('../helpers');
+const { getWebUrl, envVars } = require('../../helpers');
 
 const env = process.env.NODE_ENV;
 const webUrl = getWebUrl(env);

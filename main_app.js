@@ -55,15 +55,15 @@ app.use(passport.initialize());
  * Load commons
  */
 
-require('./config/passport')(passport);
-require('./schedulers/schedule-list');
+require('./src/config/passport')(passport);
+require('./src/schedulers/schedule-list');
 
 /**
  *  Routes
  */
 
 require('./routes')(app);
-require('./routes/chat-messages.js')(io);
+require('./src/routes/chat-messages.js')(io);
 
 app.get('*', (req, res) => {
   res.redirect(`${webUrl}`);
