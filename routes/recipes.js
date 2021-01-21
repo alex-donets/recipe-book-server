@@ -1,140 +1,141 @@
 const express = require('express');
 const multer = require('multer');
-const fs = require('fs');
 const passport = require('passport');
-const jwt_decode = require('jwt-decode');
-
 const router = express.Router();
-
 const Recipe = require('../models/recipe');
-
+const { updateValidationSchema, addValidationSchema } = require('../validations/recipe');
+const sanitize = require('mongo-sanitize');
 const upload = multer({
-    dest: 'uploads/',
+  dest: 'uploads/'
 });
 
-router.get('/', (req, res, next) => {
-    Recipe.getAllRecipes((err, recipeList) => {
-        if (err) {
-            res.status(400).json({ msg: 'Failed to get recipes - ' + err });
-        } else {
-            res.json(recipeList);
-        }
-    });
+router.get('/:id', async(req, res) => {
+  try {
+    const id = sanitize(req.params.id);
+    const recipeList = await Recipe.getRecipeByCategoryId(id);
+
+    res.status(200).json(recipeList);
+  } catch (e) {
+    res.status(400).json({ msg: 'Failed to get recipes - ' + e });
+  }
 });
 
-router.get('/:id', (req, res, next) => {
-    Recipe.getRecipeByCategoryId(req.params.id, (err, dataList) => {
-        if (err) {
-            res.status(400).json({ msg: 'Failed to get recipes - ' + err });
-        } else {
-            res.json(dataList);
-        }
-    });
+router.get('/get/photo/:id', async (req, res) => {
+  try {
+    const id = sanitize(req.params.id);
+    const photo = await Recipe.getRecipePhotoById(id);
+
+    res.writeHead(200, { 'Content-Type': 'image/jpeg' });
+    res.end(photo.photo.data, 'binary');
+  } catch (e) {
+    res.status(400).json({ msg: 'Failed to get photo: ' + e });
+  }
 });
 
-router.get('/get/:id', (req, res, next) => {
-    Recipe.getRecipeById(req.params.id, (err, dataList) => {
-        if (err) {
-            res.status(400).json({ msg: 'Failed to get recipes - ' + err });
-        } else {
-            res.json(dataList);
-        }
-    });
+router.post('/add', passport.authenticate('user', { session: false }), upload.single('file'), async(req, res) => {
+  try {
+    const ingredientList = JSON.parse(req.body.ingredients);
+
+    const data = {
+      name: sanitize(req.body.name),
+      photo: sanitize(req.file),
+      categoryId: sanitize(req.body.categoryId),
+      userId: sanitize(req.body.userId),
+      directions: sanitize(req.body.directions),
+      ingredients: sanitize(ingredientList)
+    };
+
+    await addValidationSchema.isValid(data);
+
+
+    const existedRecipe = await Recipe.getRecipeByName(data.name);
+
+    if (existedRecipe) {
+      return res.status(400).json({ msg: 'Recipe with the same name already exists' });
+    }
+
+    const createdRecipe = Recipe.createRecipe(
+        data.name,
+        data.userId,
+        data.categoryId,
+        data.ingredients,
+        data.directions,
+        data.photo
+    );
+
+    const newRecipe = await Recipe.addRecipe(createdRecipe);
+
+    if (!newRecipe) {
+      return res.status(400).json({ msg: 'Cannot add a recipe' });
+    }
+
+    const { _id, name, ingredients, categoryId, userId, directions } = newRecipe;
+
+    res.status(200).json({ _id, name, ingredients, categoryId, userId, directions });
+  } catch (e) {
+    res.status(400).json({ msg: 'Failed to add recipe: ' + e });
+  }
 });
 
-router.get('/get/photo/:id', (req, res) => {
-    Recipe.getRecipePhotoById(req.params.id, (err, photo) => {
-        if (err) {
-            res.status(400).json({ msg: 'Failed to get photo by Id' + err });
-        } else {
-            res.writeHead(200, { 'Content-Type': 'image/jpeg' });
-            res.end(photo.photo.data, 'binary');
-        }
-    });
+router.post('/update/:id', passport.authenticate('user', { session: false }), upload.single('file'), async(req, res) => {
+  try {
+    const ingredientList = JSON.parse(req.body.ingredients);
+
+    const data = {
+      id: sanitize(req.params.id),
+      name: sanitize(req.body.name),
+      photo: sanitize(req.file),
+      userId: sanitize(req.body.userId),
+      categoryId: sanitize(req.body.categoryId),
+      ingredients: sanitize(ingredientList),
+      directions: sanitize(req.body.directions),
+    };
+
+    await updateValidationSchema.validate(data);
+
+    const recipe = await Recipe.getRecipeById(data.id);
+
+    if (!recipe) {
+      return res.status(400).json({ msg: 'Recipe not found' });
+    }
+
+    const createdRecipe = Recipe.createRecipe(
+        data.name,
+        data.userId,
+        data.categoryId,
+        data.ingredients,
+        data.directions,
+        data.photo,
+        data.id,
+    );
+
+    const newRecipe = await Recipe.updateRecipe(createdRecipe);
+
+    if (!newRecipe) {
+      return res.status(400).json({ msg: 'Cannot update a recipe' });
+    }
+
+    const { _id, name, ingredients, categoryId, userId, directions } = newRecipe;
+
+    res.status(200).json({ _id, name, ingredients, categoryId, userId, directions });
+  } catch (e) {
+    res.status(400).json({ msg: 'Failed to update recipe: ' + e });
+  }
 });
 
+router.delete('/:id', passport.authenticate('user', { session: false }), async(req, res) => {
+  try {
+    const id = sanitize(req.params.id);
+    const recipe = await Recipe.removeRecipe(id);
 
-router.post('/add', upload.single('file'), (req, res) => {
-    Recipe.getRecipeByName(req.body.name, (err, recipe) => {
-        if (err) {
-            res.status(400).json({ msg: 'Failed to check recipe by name: ' + err });
-        } else if (recipe) {
-            res.status(400).json({ msg: 'Recipe with the same name already exists' });
-        } else {
-            const ingredients = JSON.parse(req.body.ingredients);
+    if (!recipe) {
+      return res.status(400).json({ msg: 'Failed to delete a recipe' });
+    }
 
-            let newRecipe = new Recipe({
-                name: req.body.name,
-                userId: req.body.userId,
-                categoryId: req.body.categoryId,
-                ingredients: ingredients,
-                directions: req.body.directions
-            });
-
-            if (req.file) {
-                newRecipe.photo.data = fs.readFileSync(req.file.path);
-                newRecipe.photo.contentType = req.file.mimetype;
-                newRecipe.photo.originalName = req.file.originalname;
-                newRecipe.photo.size = req.file.size;
-            }
-
-            Recipe.createRecipe(newRecipe, (err, recipe) => {
-                if (err) {
-                    res.status(400).json({ msg: 'Failed to add recipe: ' + err });
-                } else {
-                    const { _id, photo, name, ingredients, categoryId, userId, directions } = recipe;
-
-                    res.status(200).json({ _id, photo, name, ingredients, categoryId, userId, directions });
-                }
-            });
-        }
-    })
-});
-
-router.post('/update/:id', upload.single('file'), (req, res) => {
-    Recipe.getRecipeById(req.params.id, (err, recipe) => {
-        if (err) {
-            res.status(400).json({ msg: 'Failed to update recipe: ' + err });
-        } else {
-            const ingredients = JSON.parse(req.body.ingredients);
-
-            let newRecipe = new Recipe({
-                name: req.body.name,
-                userId: req.body.userId,
-                categoryId: req.body.categoryId,
-                ingredients: ingredients,
-                directions: req.body.directions,
-                _id: req.params.id
-            });
-
-            if (req.file) {
-                newRecipe.photo.data = fs.readFileSync(req.file.path);
-                newRecipe.photo.contentType = req.file.mimetype;
-                newRecipe.photo.originalName = req.file.originalname;
-                newRecipe.photo.size = req.file.size;
-            }
-
-            Recipe.updateRecipe(newRecipe, (err, recipe) => {
-                if (err) {
-                    res.status(400).json({ msg: 'Failed to update recipe: ' + err.message });
-                } else {
-                    const { _id, photo, name, ingredients, categoryId, userId, directions } = recipe;
-                    res.status(200).json({ _id, photo, name, ingredients, categoryId, userId, directions });
-                }
-            });
-        }
-    })
-});
-
-
-router.delete('/:id', (req, res) => {
-    Recipe.removeRecipe(req.params.id, (err) => {
-        if (err) {
-            res.status(400).json({ msg: 'Failed to delete recipe - ' + err });
-        } else {
-            res.status(200).json({ msg: 'Recipe deleted.' });
-        }
-    });
+    res.status(200).json({ msg: 'Recipe deleted' });
+  } catch (e) {
+    res.status(400).json({ msg: 'Failed to delete a recipe: ' + e });
+  }
 });
 
 module.exports = router;

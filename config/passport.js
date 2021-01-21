@@ -1,53 +1,56 @@
 const JwtStrategy = require('passport-jwt').Strategy;
 const ExtractJwt = require('passport-jwt').ExtractJwt;
 const User = require('../models/user');
-const config = require('../config/config');
 
-module.exports = function(passport) {
-  
-  let opts = {};
-  opts.jwtFromRequest = ExtractJwt.fromAuthHeaderWithScheme('jwt');
+module.exports = (passport) => {
+  const opts = {};
+  opts.jwtFromRequest = ExtractJwt.fromHeader('jwt');
   opts.secretOrKey = process.env.AUTH_SECRET_KEY;
 
-  passport.use('admin-rule', new JwtStrategy(opts, (jwt_payload, done) => {
-    User.getUserById(jwt_payload.data._id, (err, user) => {
-      if(err) {
-        return done(err, false);
-      }
+  passport.use(
+    'admin',
+    new JwtStrategy(opts, async(jwt_payload, done) => {
+      try {
+        const user = await User.getUserById(jwt_payload.data._id);
 
-      if(user && User.isAdmin(user)) {
-        return done(null, user);
-      } else {
-        return done(null, false);
+        if (user && User.isAdmin(user)) {
+          return done(null, user);
+        } else {
+          return done(null, false);
+        }
+      } catch (e) {
+        return done(e, false);
       }
-    });
-  }));
+    })
+  );
 
-  passport.use('user-rule', new JwtStrategy(opts, (jwt_payload, done) => {
-    User.getUserById(jwt_payload.data._id, (err, user) => {
-      if(err) {
-        return done(err, false);
+  passport.use(
+    'user',
+    new JwtStrategy(opts, async(jwt_payload, done) => {
+      try {
+        const user = await User.getUserById(jwt_payload.data._id);
+
+        if (user) {
+          return done(null, user);
+        } else {
+          return done(null, false);
+        }
+      } catch (e) {
+        return done(e, false);
       }
+    })
+  );
 
-      if(user) {
-        return done(null, user);
-      } else {
-        return done(null, false);
-      }
-    });
-  }));
-
-  passport.serializeUser(function(user, done) {
+  passport.serializeUser(function (user, done) {
     const sessionUser = {
       _id: user._id,
-      email: user.email,
+      email: user.email
     };
 
     done(null, sessionUser);
   });
 
-  passport.deserializeUser(function(user, done) {
+  passport.deserializeUser(function (user, done) {
     done(null, user);
   });
 };
-

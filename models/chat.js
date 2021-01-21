@@ -1,20 +1,22 @@
-const config = require('../config/config');
 const mongoose = require('mongoose');
 
-const ChatSchema = mongoose.Schema({
+const ChatSchema = mongoose.Schema(
+  {
     message: {
-        type: String,
-        required: true
+      type: String,
+      required: true
     },
     user: {
-        id: String,
-        fullName: String
+      id: String,
+      fullName: String
     },
     timestamp: {
-        type: Number,
-        required: true
-    },
-}, { collection: config.dbPrefix + 'chat' });
+      type: Number,
+      required: true
+    }
+  },
+  { collection: process.env.DB_PREFIX + 'chat' }
+);
 
 const Chat = module.exports = mongoose.model('Chat', ChatSchema);
 

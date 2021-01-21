@@ -47,3 +47,6 @@ src/logs/api.log
 uploads/*
 
 /.env
+
+# mongo db
+/data

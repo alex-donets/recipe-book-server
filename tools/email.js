@@ -1,26 +1,27 @@
 const sgMail = require('@sendgrid/mail');
 
-exports.sendEmail = function (address, subject, text, html, callback) {
+exports.sendEmail = async(address, subject, text, html) => {
+  await sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
-    sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+  let msg = {
+    to: address,
+    from: process.env.SENDGRID_EMAIL_FROM,
+    subject: subject
+  };
 
-    var msg = {
-        to: address,
-        from: process.env.SENDGRID_EMAIL_FROM,
-        subject: subject,
-    };
+  if (text) msg.text = text;
+  if (html) msg.html = html;
 
-    if (text)
-        msg.text = text;
-    if (html)
-        msg.html = html;
+  try {
+    const sendEmail = await sgMail.send(msg);
 
+    if (!sendEmail) {
+      throw new Error('Email has not been sent');
+    }
 
-    sgMail.send(msg)
-        .then(() => {
-            callback({ msg: "Reset password email has been sent" });
-        })
-        .catch(error => {
-            callback({ msg: error.toString() });
-        });
+  return sendEmail;
+
+  } catch (e) {
+    throw new Error(e);
+  }
 };

@@ -1,122 +1,125 @@
 const express = require('express');
 const multer = require('multer');
-const fs = require('fs');
 const passport = require('passport');
-
 const router = express.Router();
-
 const Category = require('../models/category');
+const upload = multer({ dest: 'uploads/' });
+const { updateValidationSchema, addValidationSchema } = require('../validations/category');
+const sanitize = require('mongo-sanitize');
 
-const upload = multer({
-    dest: 'uploads/',
+router.get(
+  '/',
+  async (req, res) => {
+    try {
+      const categoryList = await Category.getAllCategories();
+
+      if (!categoryList) {
+        return res.status(400).json({ msg: 'Failed to get categories' });
+      }
+
+      res.status(200).json(categoryList);
+    } catch (e) {
+      res.status(400).json({ msg: 'Failed to get categories: ' + e });
+    }
+  }
+);
+
+router.get('/get/photo/:id', async(req, res) => {
+  try {
+    const id = sanitize(req.params.id);
+    const photo = await Category.getCategoryPhotoById(id);
+
+    if (photo) {
+      res.writeHead(200, { 'Content-Type': 'image/jpeg' });
+      res.end(photo.photo.data, 'binary');
+    } else {
+      res.json({ msg: "Photo doesn't exist" });
+    }
+  } catch (e) {
+    res.status(400).json({ msg: 'Failed to get photo:' + e });
+  }
 });
 
-router.get('/', (req, res, next) => {
-    Category.getAllCategories((err, categoryList) => {
-        if (err) {
-            res.status(400).json({ msg: 'Failed to get categories - ' + err });
-        } else {
-            // TODO: return base64, not a text array
-            res.status(200).json(categoryList);
-        }
-    });
+router.post('/add', passport.authenticate('admin', { session: false }), upload.single('file'), async(req, res) => {
+  try {
+    const data = {
+      name: sanitize(req.body.name),
+      photo: sanitize(req.file)
+    };
+
+    await addValidationSchema.validate(data);
+
+    const existedCategory = await Category.getCategoryByName(data.name);
+
+    if (existedCategory) {
+      return res.status(400).json({ msg: 'Category with the same name already exists' });
+    }
+
+    const createdCategory = Category.createCategory(data.name, data.photo);
+
+    const newCategory = await Category.addCategory(createdCategory);
+
+    if (!newCategory) {
+      return res.status(400).json({ msg: 'Cannot create a category' });
+    }
+
+    const { _id, name } = newCategory;
+
+    res.status(200).json({ _id, name });
+  } catch (e) {
+    res.status(400).json({ msg: 'Failed to add category: ' + e });
+  }
 });
 
-router.get('/data', (req, res, next) => {
-    Category.getAllCategories((err, dataList) => {
-        if (err) {
-            res.status(400).json({ msg: 'Failed to get categories - ' + err });
-        } else {
-            res.status(200).json(dataList);
-        }
-    });
+router.post('/update/:id', passport.authenticate('admin', { session: false }), upload.single('file'), async(req, res) => {
+  try {
+    const data = {
+      id: sanitize(req.params.id),
+      name: sanitize(req.body.name),
+      photo: sanitize(req.file)
+    };
+
+    await updateValidationSchema.validate(data);
+
+    const category = await Category.getCategoryById(data.id);
+
+    if (!category) {
+      return res.status(400).json({ msg: 'Category not found' });
+    }
+
+    const newCategory = Category.createCategory(data.name, data.photo, data.id);
+
+    if (!newCategory) {
+      return res.status(400).json({ msg: 'Cannot update a category' });
+    }
+
+    const updatedCategory = await Category.updateCategory(newCategory);
+
+    if (!updatedCategory) {
+      return res.status(400).json({ msg: 'Cannot update a category' });
+    }
+
+    const { _id, photo, name } = updatedCategory;
+    res.status(200).json({ _id, photo, name });
+
+  } catch (e) {
+    res.status(400).json({ msg: 'Cannot update a category: ' + e });
+  }
 });
 
-router.get('/get/photo/:id', (req, res) => {
-    Category.getCategoryPhotoById(req.params.id, (err, photo) => {
-        if (err) {
-            res.status(400).json({ msg: 'Failed to get photo by Id' + err });
-        } else {
-            if (photo) {
-                res.writeHead(200, { 'Content-Type': 'image/jpeg' });
-                res.end(photo.photo.data, 'binary');
-            } else {
-                res.json({ msg: 'Photo doesn\'t exist' });
-            }
-        }
-    });
-});
+router.delete('/:id', passport.authenticate('admin', { session: false }), async(req, res) => {
+  try {
+    const id = sanitize(req.params.id);
+    const category = await Category.removeCategory(id);
 
+    if (!category) {
+      return res.status(400).json({ msg: 'Failed to delete category' });
+    }
 
-router.post('/add', upload.single('file'), (req, res) => {
-    Category.getCategoryByName(req.body.name, (err, category) => {
-        if (err) {
-            res.status(400).json({ msg: 'Failed to check category by name: ' + err });
-        } else if (category) {
-            res.status(400).json({ msg: 'Category with the same name already exists' });
-        } else {
-            let newCategory = new Category({
-                name: req.body.name,
-            });
-
-            if (req.file) {
-                newCategory.photo.data = fs.readFileSync(req.file.path);
-                newCategory.photo.contentType = req.file.mimetype;
-                newCategory.photo.originalName = req.file.originalname;
-                newCategory.photo.size = req.file.size;
-            }
-
-            Category.createCategory(newCategory, (err, category) => {
-                if (err) {
-                    res.status(400).json({ msg: 'Failed to add category: ' + err });
-                } else {
-                    const { _id, photo, name } = category;
-
-                    res.status(200).json({ _id, photo, name });
-                }
-            });
-        }
-    })
-});
-
-router.post('/update/:id', upload.single('file'), (req, res) => {
-    Category.getCategoryById(req.params.id, (err, category) => {
-        if (err) {
-            res.status(400).json({ msg: 'Failed to update category: ' + err });
-        } else {
-            let newCategory = new Category({
-                name: req.body.name,
-                _id: req.params.id
-            });
-
-            if (req.file) {
-                newCategory.photo.data = fs.readFileSync(req.file.path);
-                newCategory.photo.contentType = req.file.mimetype;
-                newCategory.photo.originalName = req.file.originalname;
-                newCategory.photo.size = req.file.size;
-            }
-
-            Category.updateCategory(newCategory, (err, category) => {
-                if (err) {
-                    res.status(400).json({ msg: 'Failed to update category: ' + err.message });
-                } else {
-                    const { _id, photo, name } = category;
-                    res.status(200).json({ _id, photo, name });
-                }
-            });
-        }
-    })
-});
-
-
-router.delete('/:id', (req, res) => {
-    Category.removeCategory(req.params.id, (err) => {
-        if (err) {
-            res.status(400).json({ msg: 'Failed to delete category - ' + err });
-        } else {
-            res.status(200).json({ msg: 'Category deleted.' });
-        }
-    });
+    res.status(200).json({ msg: 'Category deleted' });
+  } catch (e) {
+    res.status(400).json({ msg: 'Failed to delete category:' + e });
+  }
 });
 
 module.exports = router;

@@ -1,76 +1,99 @@
-const config = require('../config/config');
 const mongoose = require('mongoose');
+const fs = require('fs');
 
-const RecipeSchema = mongoose.Schema({
+const RecipeSchema = mongoose.Schema(
+  {
     name: {
-        type: String,
-        required: true
+      type: String,
+      required: true
     },
     userId: {
-        type: String,
-        required: true
+      type: String,
+      required: true
     },
     categoryId: {
-        type: String,
-        required: true
+      type: String,
+      required: true
     },
     photo: {
-        data: Buffer,
-        contentType: String,
-        originalName: String,
-        size: Number,
+      data: Buffer,
+      contentType: String,
+      originalName: String,
+      size: Number
     },
-    ingredients: [],
-    directions: {
-        type: String,
+    ingredients: {
+        type: Array,
         required: true
     },
-}, { collection: config.dbPrefix + 'recipes' });
+    directions: {
+      type: String,
+      required: true
+    }
+  },
+  { collection: process.env.DB_PREFIX + 'recipes' }
+);
 
-const Recipe = module.exports = mongoose.model('Recipe', RecipeSchema);
+const Recipe = mongoose.model('Recipe', RecipeSchema);
 
-module.exports.getAllRecipes = function (callback) {
-    Recipe.find({}, 'name userId photo ingredients', callback);
+const getRecipeById = (id) => Recipe.findById(id);
+
+const getRecipeByCategoryId = (categoryId) => Recipe.find({ categoryId }, '_id name userId ingredients categoryId directions');
+
+const getRecipeByName = (name) => Recipe.findOne({ name });
+
+const getRecipePhotoById = (id) => Recipe.findById(id, 'photo');
+
+const updateRecipe = async(newRecipe) => {
+    try {
+        const options = {
+            new: true,
+            useFindAndModify: false,
+        };
+
+        const updatedRecipe = await Recipe.findOneAndUpdate({ _id: newRecipe._id }, newRecipe, options);
+
+        return updatedRecipe;
+    } catch (e) {
+        throw new Error(e);
+    }
 };
 
-module.exports.getRecipeById = function (id, callback) {
-    return Recipe.findById(id, callback);
-};
+const addRecipe = (newRecipe) => Recipe.create(newRecipe);
 
-module.exports.getRecipeByCategoryId = function (id, callback) {
-    Recipe.findById(id, 'categoryId', callback);
-};
+const removeRecipe = (_id) => Recipe.remove({ _id });
 
-module.exports.getRecipeByName = function (recipe, callback) {
-    const query = { name: recipe };
-    Recipe.findOne(query, callback);
-};
+const createRecipe = (name, userId, categoryId, ingredients, directions, file, _id) => {
+    try {
+        const newRecipe = new Recipe({
+            name,
+            userId,
+            categoryId,
+            ingredients,
+            directions,
+            _id
+        });
 
-module.exports.getRecipeByCategoryId = function (categoryId, callback) {
-    const query = { categoryId: categoryId };
-    Recipe.find(query, callback);
-};
-
-module.exports.getRecipePhotoById = function (id, callback) {
-    Recipe.findById(id, 'photo', callback);
-};
-
-module.exports.updateRecipe = function (newRecipe, callback) {
-    Recipe.findByIdAndUpdate({ _id: newRecipe._id }, newRecipe, {new: true}, callback);
-};
-
-module.exports.createRecipe = function (newRecipe, callback) {
-    Recipe.create(newRecipe, callback);
-};
-
-module.exports.removeRecipe = function (id, callback) {
-    Recipe.remove({_id: id}, callback);
-};
-
-module.exports.getRecipesByIds = function (ids) {
-    return Recipe.find({
-        _id: {
-            $in: ids
+        if (file) {
+            newRecipe.photo.data = fs.readFileSync(file.path);
+            newRecipe.photo.contentType = file.mimetype;
+            newRecipe.photo.originalName = file.originalname;
+            newRecipe.photo.size = file.size;
         }
-    }).exec();
+
+        return newRecipe;
+    } catch (e) {
+        throw new Error(e);
+    }
+};
+
+module.exports = {
+    Recipe,
+    getRecipeById,
+    getRecipeByCategoryId,
+    getRecipeByName,
+    getRecipePhotoById,
+    updateRecipe,
+    createRecipe,
+    addRecipe,
+    removeRecipe
 };
