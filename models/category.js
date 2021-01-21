@@ -1,55 +1,79 @@
-const config = require('../config/config');
 const mongoose = require('mongoose');
+const fs = require('fs');
 
-const CategorySchema = mongoose.Schema({
+const CategorySchema = mongoose.Schema(
+  {
     name: {
-        type: String, 
-        required: true
+      type: String,
+      required: true
     },
-    photo: {    // https://medium.com/@alvenw/how-to-store-images-to-mongodb-with-node-js-fb3905c37e6d
-        data: Buffer,
-        contentType: String,
-        originalName: String,
-        size: Number,
-    },
-}, { collection: config.dbPrefix + 'categories' });
+    photo: {
+      data: Buffer,
+      contentType: String,
+      originalName: String,
+      size: Number
+    }
+  },
+  { collection: process.env.DB_PREFIX + 'categories' }
+);
 
-const Category = module.exports = mongoose.model('Category', CategorySchema);
+const Category = mongoose.model('Category', CategorySchema);
 
-module.exports.getAllCategories = function (callback) {
-    Category.find({}, 'name photo', callback);
+const getAllCategories = () => Category.find({}, 'name');
+
+const getCategoryById = (id) => Category.findById(id);
+
+const getCategoryPhotoById = (id) => Category.findById(id, 'photo');
+
+const getCategoryByName = (category) => Category.findOne({ name: category });
+
+const updateCategory = async(newCategory) => {
+    try {
+        const options = {
+            new: true,
+            useFindAndModify: false,
+        };
+
+        const updatedCategory = await Category.findOneAndUpdate({ _id: newCategory._id }, newCategory, options);
+
+        return updatedCategory;
+    } catch (e) {
+        throw new Error(e);
+    }
 };
 
-module.exports.getCategoryById = function (id, callback) {
-    return Category.findById(id, callback);
-};
+const addCategory = (newCategory) => Category.create(newCategory);
 
-module.exports.getCategoryPhotoById = function (id, callback) {
-    Category.findById(id, 'photo', callback);
-};
+const removeCategory = (id) => Category.deleteOne({ _id: id });
 
-module.exports.getCategoryByName = function (category, callback) {
-    const query = { name: category };
-    Category.findOne(query, callback);
-};
+const createCategory = (name, file, id) => {
+    try {
+        const newCategory = new Category({
+            name: name,
+            _id: id
+        });
 
-module.exports.updateCategory = function (newCategory, callback) {
-    Category.findByIdAndUpdate({ _id: newCategory._id }, newCategory, {new: true}, callback);
-};
-
-module.exports.createCategory = function (newCategory, callback) {
-    Category.create(newCategory, callback);
-};
-
-module.exports.removeCategory = function (id, callback) {
-    Category.remove({_id: id}, callback);
-};
-
-module.exports.getCategoriesByIds = function (ids) {
-    return Category.find({
-        _id: {
-            $in: ids
+        if (file) {
+            newCategory.photo.data = fs.readFileSync(file.path);
+            newCategory.photo.contentType = file.mimetype;
+            newCategory.photo.originalName = file.originalname;
+            newCategory.photo.size = file.size;
         }
-    }).exec();
+
+        return newCategory;
+    } catch (e) {
+        throw new Error(e);
+    }
 };
 
+module.exports = {
+    Category,
+    getAllCategories,
+    getCategoryById,
+    getCategoryPhotoById,
+    getCategoryByName,
+    updateCategory,
+    addCategory,
+    removeCategory,
+    createCategory
+};

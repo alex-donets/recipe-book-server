@@ -1,179 +1,152 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
-const config = require('../config/config');
+const jwt = require('jsonwebtoken');
 
-const UserSchema = mongoose.Schema({
-  fullName: {
-    type: String
+const UserSchema = mongoose.Schema(
+  {
+    fullName: {
+      type: String
+    },
+    email: {
+      type: String,
+      required: true
+    },
+    password: {
+      type: String,
+      required: true
+    },
+    role: {
+      type: String,
+      default: 'user'
+    },
+    agreeTaC: {
+      type: Boolean,
+      required: true
+    },
+    regDate: String
   },
-  email: {
-    type: String,
-    required: true
-  },
-  password: {
-    type: String,
-    required: true
-  },
-  role: {
-    type: String,
-    default: 'user'
-  },
-  agreeTaC: {
-    type: Boolean,
-    required: true
-  },
-  regDate: String,
-}, {collection: config.dbPrefix + 'users'});
+  { collection: process.env.DB_PREFIX + 'users' }
+);
 
-const User = module.exports = mongoose.model('User', UserSchema);
+const User = mongoose.model('User', UserSchema);
 
-// User Info for customers
-
-function userToUserInfo(user) {
-  return {
-    _id: user._id,
-    username: user.username,
-    email: user.email,
-  };
-}
-
-// User Info for admin
-
-function customerInfo(user) {
-  return {
-    _id: user._id,
-    name: user.name,
-    email: user.email,
-    role: user.role
-  };
-}
-
-function toUserUpdate(data) {
-  return {
-    _id: data._id,
-    name: data.name,
-    email: data.email,
-  };
-}
-
-module.exports.getUserById = function (id, callback) {
-  User.findById(id, callback);
+const getUserByEmail = (email) => {
+  return User.findOne({ email });
 };
 
-module.exports.getUserNameById = function (id, callback) {
-  User.findById(id, 'fullName', callback);
+const getUserById = ( _id ) => {
+  return User.findOne({ _id });
 };
 
-module.exports.getUserByEmail = function (email, callback) {
-  const query = { email: email };
-  User.findOne(query, callback);
+const getUserByCredentials = async (email, password) => {
+  const emailLowerCased = email ? email.toLowerCase() : undefined;
+  const user = await User.findOne({ email: emailLowerCased });
+
+  if (!user) {
+    throw new Error('Unable to login');
+  }
+
+  const isMatch = await bcrypt.compare(password, user.password);
+
+  if (!isMatch) {
+    throw new Error('Passwords not match');
+  }
+
+  return user;
 };
 
-module.exports.createUser = function (newUser, callback) {
+const generateAuthToken = async (user) => {
+  const token = jwt.sign(
+    { data: user },
+    process.env.AUTH_SECRET_KEY,
+    { expiresIn: 604800 } // 1 week
+  );
 
-  this.getUserByEmail(newUser.email, (err, user) => {
-    if (user != null) {
-      callback("Another user with same email already exists.", null);
-      return;
+  return token;
+};
+
+const createUser = async (newUser) => {
+  try {
+    const hash = await hashPassword(newUser.password);
+
+    newUser.password = hash;
+
+    return newUser.save();
+  } catch (e) {
+    throw new Error('Cannot create user');
+  }
+};
+
+const hashPassword = async(password) => {
+  const salt = await bcrypt.genSalt(10);
+
+  if (!salt) {
+    throw new Error('Cannot encrypt a password');
+  }
+
+  const hash = await bcrypt.hash(password, salt);
+
+  if (!hash) {
+    throw new Error('Cannot generate hash');
+  }
+
+  return hash;
+};
+
+const updatePassword = ({ _id, password }) => User.update({ _id }, { password });
+
+const comparePassword = (password, hash) => {
+  try {
+    return bcrypt.compare(password, hash);
+  } catch (e) {
+    throw new Error(e);
+  }
+};
+
+const isAdmin = (user) => {
+  return user.role === 'admin';
+};
+
+const resetPassword = async (email, password) => {
+  try {
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      throw new Error('User not found');
     }
 
-    bcrypt.genSalt(10, (err, salt) => {
-      bcrypt.hash(newUser.password, salt, (err, hash) => {
-        if (err) {
-          callback(err.toString(), null);
-        } else {
-          newUser.password = hash;
-          newUser.save(callback);
-        }
-      });
+    const hash = await hashPassword(password);
+
+    const updatingUser = new User({
+      _id: user._id,
+      email,
+      password: hash
     });
-  });
-};
 
-module.exports.updateUser = function (newUser) {
-  const upsertData = toUserUpdate(newUser);
-  const existingUser = User.infoById(newUser._id);
-  return existingUser.then((user) =>{
+    const updatedUser = await updatePassword(updatingUser);
 
-    if (user.email !== upsertData.email) {
-      upsertData.emailVerified = false;
+    if (!updatedUser) {
+      throw new Error('Cannot update user');
     }
-  }).then(() => {
-    return User.update({_id: newUser._id}, upsertData, {upsert: true}).exec();
-  }).then(() => {
-    return User.findById(newUser._id).exec();
-  })
-      .then(User.toUserInfo);
+
+    return updatedUser;
+  } catch (e) {
+    throw new Error(e);
+  }
 };
 
-module.exports.updateCustomer = function (updatedCustomer, callback) {
-  const upsertData = updatedCustomer;
-  User.updateOne({ _id: updatedCustomer._id }, upsertData, callback);
+const removeUser = (email) => User.remove({ email });
+
+module.exports = {
+  User,
+  getUserByEmail,
+  getUserById,
+  getUserByCredentials,
+  generateAuthToken,
+  createUser,
+  updatePassword,
+  comparePassword,
+  resetPassword,
+  isAdmin,
+  removeUser
 };
-
-module.exports.updatePassword = function (newUser, callback) {
-  User.update({ _id: newUser._id }, { password: newUser.password }, callback);
-};
-
-module.exports.comparePassword = function (candidatePassword, hash, callback) {
-  bcrypt.compare(candidatePassword, hash, (err, isMatch) => {
-    if (err)
-      callback(err.toString(), null);
-    else
-      callback(null, isMatch);
-  });
-};
-
-module.exports.isAdmin = function (user) {
-  console.log('user', user)
-  return (user.role === "admin");
-};
-
-module.exports.resetPassword = function (email, password, callback) {
-  const query = { email: email };
-  User.findOne(query, (err, user) => {
-    if (err) {
-      callback(err, null);
-    } else {
-      bcrypt.genSalt(10, (err, salt) => {
-        bcrypt.hash(password, salt, (err, hash) => {
-          if (err) {
-            callback(err.toString(), null);
-          } else {
-            let updatingUser = new User({
-              _id: user._id,
-              email: email,
-              password: hash
-            });
-            this.updatePassword(updatingUser, callback);
-          }
-        });
-      });
-    }
-  });
-};
-
-module.exports.removeUser = function (email, callback) {
-  return User.remove({ email: email }, callback);
-};
-
-module.exports.toUserInfo = function (user) {
-  return userToUserInfo(user);
-};
-
-module.exports.infoById = function (id) {
-  return User.findById(id).exec().then(User.toUserInfo);
-};
-
-module.exports.customerInfoById = function (id) {
-  return User.findById(id).exec().then(user => customerInfo(user));
-};
-
-
-module.exports.findUsersByOption = function (value, option, callback) {
-  const regex = value.trim().replace('+', '') ;
-  const query = { [option]: { $regex: new RegExp(regex, "i") } };
-
-  User.find(query, `name email ${option}`, callback);
-};
-

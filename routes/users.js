@@ -1,203 +1,162 @@
 const express = require('express');
 const router = express.Router();
-const passport = require('passport');
 const jwt = require('jsonwebtoken');
-const config = require('../config/config');
 const User = require('../models/user');
+const UserModel = require('../models/user').User;
 const { sendResetPassEmail } = require('../services/email-reset-pass.service');
 const jwt_decode = require('jwt-decode');
+const sanitize = require('mongo-sanitize');
+const {
+  signUpValidationSchema,
+  signInValidationSchema,
+  resetPassValidationSchema,
+  setPassValidationSchema
+} = require('../validations/user');
 
-router.post('/register', (req, res, next) => {
-  let role = 'user';
+router.post('/register', async (req, res) => {
+  try {
+    let role = 'user';
+    const userEmail = sanitize(req.body.email);
 
-  if(req.body.email === process.env.TEST_ADMIN_EMAIL || req.body.email === process.env.RECIPE_ADMIN_EMAIL) {
-    role = 'admin';
-  }
-
-  if(req.body.email === 'koshachina@yahoo.com') {
-    role = 'admin';
-  }
-
-  const email = req.body.email && req.body.email.toLowerCase();
-
-  let newUser = new User({
-    fullName: req.body.fullName,
-    email: email || null,
-    password: req.body.password,
-    agreeTaC: req.body.agreeTaC,
-    regDate: (new Date()).toISOString(),
-    role: role,
-  });
-
-  User.getUserByEmail(newUser.email,(err, user) => {
-    if (err) {
-      res.json({ success: false, msg: 'User registration failed'});
-    } else if (!user) {
-      User.createUser(newUser, (err) => {
-        if (err) {
-          return res.status(403).json({ msg: 'Registration failed: ' + err.message });
-        }
-
-        return res.status(200).json({ msg: 'User registered' });
-      });
-    } else {
-      res.status(403).json({ msg: 'User registration failed, email already in use'});
-    }
-  });
-});
-
-router.post('/update', passport.authenticate('user-rule', { session: false }), (req, res, next) => {
-  const email = req.body.email && req.body.email.toLowerCase();
-
-  let newUser = new User({
-    _id: req.body._id,
-    name: req.body.name,
-    email: email || null,
-    password: req.body.password
-  });
-
-  User.getUserByEmail(newUser.email,(err, user) => {
-    if (err) {
-      res.json({ success: false, msg: 'User has NOT been updated.'});
-    } else {
-      User.updateUser(newUser).then((user) => {
-        res.json({success: true, user: user});
-      }).catch(next);
-    }
-  });
-});
-
-router.post('/login', (req, res, next) => {
-  const email = req.body.email ? req.body.email.toLowerCase() : undefined;
-  const password = req.body.password;
-
-  User.getUserByEmail(email, (err, user) => {
-    if (err) {
-      return res.json({ success: false, msg: err });
-    } else if (!user) {
-      return res.status(404).json({ msg: `User with email ${email} is not registered` });
+    if (userEmail === process.env.TEST_ADMIN_EMAIL || userEmail === process.env.RECIPE_ADMIN_EMAIL) {
+      role = 'admin';
     }
 
-    User.comparePassword(password, user.password, (err, isMatch) => {
-      if (err) {
-        return res.status(401).json({ msg: err });
-      }
-      if (isMatch) {
-        const token = jwt.sign({ data: user }, process.env.AUTH_SECRET_KEY, {
-          expiresIn: 604800 // 1 week
-        });
+    const email = userEmail && userEmail.toLowerCase();
 
-        try {
-          res.json({
-            token,
-            id: user._id,
-            email: user.email,
-            fullName: user.fullName,
-            role: user.role,
-          });
-        } catch (err) {
-          res.status(401).json({ msg: 'Login failed. Please check email/password and try again'});
-        }
-      } else {
-        return res.status(401).json({ msg: 'Login failed. Please check email/password and try again' });
-      }
+    const newUser = new UserModel({
+      fullName: sanitize(req.body.fullName),
+      email: email || null,
+      password: sanitize(req.body.password),
+      agreeTaC: sanitize(req.body.agreeTaC),
+      regDate: new Date().toISOString(),
+      role: role
     });
-  });
+
+    await signUpValidationSchema.validate(newUser);
+
+    const existingUser = await User.getUserByEmail(newUser.email);
+
+    if (existingUser) {
+      return res.status(400).json({ msg: 'User registration failed, email already in use' });
+    }
+
+    const createdUser = await User.createUser(newUser);
+
+    if (!createdUser) {
+      return res.status(400).json({ msg: 'User registration failed' });
+    }
+
+    res.status(200).json({ msg: 'User registered' });
+  } catch (e) {
+    res.status(400).json({ msg: 'Registration failed: ' + e });
+  }
 });
 
-router.post('/reset-password', (req, res, next) => {
-  const email = req.body.email;
+router.post('/login', async (req, res) => {
+  try {
+    const data = {
+      email: sanitize(req.body.email),
+      password: sanitize(req.body.password)
+    };
 
-  User.getUserByEmail(email, (err, user) => {
-    if (err) {
-      return res.json({ success: false, msg: err });
-    }
+    await signInValidationSchema.validate(data);
+
+    const user = await User.getUserByCredentials(data.email, data.password);
+    const token = await User.generateAuthToken(user);
+
+    await res.json({
+      token,
+      id: user._id,
+      email: user.email,
+      fullName: user.fullName,
+      role: user.role
+    });
+  } catch (e) {
+    res.status(401).json({ msg: 'Login failed. Please check email/password and try again' });
+  }
+});
+
+router.post('/reset-password', async(req, res) => {
+  try {
+    const userEmail = sanitize(req.body.email);
+    const email = userEmail ? userEmail.toLowerCase() : undefined;
+
+    await resetPassValidationSchema.validate({ email: userEmail });
+
+    const user = await User.getUserByEmail(email);
+
     if (!user) {
-      return res.json({ success: false, msg: 'User not found' });
+      return res.status(404).json({ msg: 'User not found' });
     }
 
     const token = jwt.sign({ data: user }, process.env.AUTH_SECRET_KEY, {
       expiresIn: 604800 // 1 week
     });
 
-    sendResetPassEmail(email, token);
-    res.status(200).json({ msg: "Reset password email has been sent" });
-  });
-});
+    const response = await sendResetPassEmail(email, token);
 
-router.post('/set-password', (req, res, next) => {
-  const clientKey = req.body.key;
-  const serverKey = process.env.AUTH_SECRET_KEY;
-  const password = req.body.password;
+    if (!response) {
+      return res.status(400).json({ msg: 'Reset password email has not been sent' });
+    }
 
-  if (clientKey !== serverKey) {
-    return res.status(403).json({ msg: 'Secret keys don\'t match' });
-  }
-
-  if (!req.body.token) {
-    return res.status(403).json({ msg: 'User token is not provided' });
-  }
-
-  const token = jwt_decode(req.body.token);
-  if (token) {
-    const { data } = token;
-
-    User.resetPassword(data.email, password, (err) => {
-      if (err) {
-        return res.status(403).json({ msg: 'Reset password failed: ' + err });
-      }
-      return res.status(200).json({ msg: 'Reset password success' });
-    });
-  }
-});
-
-router.delete('/delete', (req, res, next) => {
-  if (
-    req.body.email === process.env.TEST_ADMIN_EMAIL ||
-      req.body.email === process.env.TEST_USER_EMAIL
-  ) {
-    User.removeUser(req.body.email, (err, user) => {
-      if (err) {
-        return res.status(401).json({ msg: err });
-      } else {
-        return res.json({ msg: 'User has been deleted' });
-      }
-    });
-  } else {
-    return res.status(401).json({ msg: 'Only test users can be deleted' });
-  }
-});
-
-router.get('/info', passport.authenticate('user-rule', { session: true }), (req, res, next) => {
-  User.infoById(req.user._id).then((userInfo)=> {
-   userInfo.cards = normalizeCards(userInfo.cards);
-   res.json({success: true, user: userInfo});
- }).catch(next);
-});
-
-router.post('/find', passport.authenticate('admin-rule', { session: true }), (req, res, next) => {
-  try {
-    User.findUsersByOption(req.body.name, req.body.query, (err, users) => {
-      if (err) {
-        res.json({ msg: err });
-      } else {
-        res.json({ list: users });
-      }
-    });
+    res.status(200).json({ msg: 'Reset password email has been sent' });
   } catch (e) {
-    console.log("Failed to get users: " + e);
-    res.status(500).json({ success: false, msg: "Failed to get users: " + e });
+    return res.status(403).json({ msg: e });
   }
 });
 
-router.get('/:id', passport.authenticate('admin-rule', { session: true }), (req, res, next) => {
+router.post('/set-password', async (req, res) => {
   try {
-    User.customerInfoById(req.params.id).then((userInfo)=> {
-      res.status(200).json({ success: true, user: userInfo });
-    }).catch(next);
+    const clientKey = sanitize(req.body.key);
+    const serverKey = process.env.AUTH_SECRET_KEY;
+    const password = sanitize(req.body.password);
+
+    await setPassValidationSchema.validate({ password });
+
+    if (clientKey !== serverKey) {
+      return res.status(403).json({ msg: "Secret keys don't match" });
+    }
+
+    if (!req.body.token) {
+      return res.status(403).json({ msg: 'User token is not provided' });
+    }
+
+    const token = jwt_decode(req.body.token);
+
+    if (token) {
+      const { data } = token;
+
+      const user = await User.resetPassword(data.email, password);
+
+      if (!user) {
+        return res.status(403).json({ msg: 'Reset password failed' });
+      }
+
+      res.status(200).json({ msg: 'Reset password success' });
+    }
   } catch (e) {
-    console.log("Failed to get users: " + e);
-    res.status(500).json({ success: false, msg: "Failed to get users: " + e });
+    res.status(403).json({ msg: 'Reset password failed: ' + e });
+  }
+});
+
+router.delete('/delete', async (req, res) => {
+  try {
+    const userEmail = sanitize(req.body.email);
+
+    if (userEmail === process.env.TEST_ADMIN_EMAIL || userEmail === process.env.TEST_USER_EMAIL) {
+      const user = await User.removeUser(userEmail);
+
+      if (!user) {
+        return res.status(403).json({ msg: 'Cannot delete user' });
+      }
+
+      return res.json({ msg: 'User has been deleted' });
+    }
+
+    res.status(401).json({ msg: 'Only test users can be deleted' });
+  } catch (e) {
+      return res.status(401).json({ msg: 'Cannot delete user: ' + e });
   }
 });
 

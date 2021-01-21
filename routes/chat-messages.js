@@ -13,12 +13,12 @@ const getAllMessages = (io) => {
                     message: item.message,
                     timestamp: item.timestamp,
                     user: item.user
-                }
+                };
             });
 
             io.sockets.emit("get-messages", messageList);
         }
-    })
+    });
 };
 
 const io = (io) => {
@@ -52,7 +52,7 @@ const io = (io) => {
                     } else {
                         getAllMessages(io);
                     }
-                })
+                });
             });
 
             socket.on("disconnect", () => {
