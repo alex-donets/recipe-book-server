@@ -20,7 +20,7 @@ router.get('/:id', async(req, res) => {
   }
 });
 
-router.get('/get/photo/:id', async (req, res) => {
+router.get('/get/photo/:id/:timestamp', async (req, res) => {
   try {
     const id = sanitize(req.params.id);
     const photo = await Recipe.getRecipePhotoById(id);
@@ -69,9 +69,9 @@ router.post('/add', passport.authenticate('user', { session: false }), upload.si
       return res.status(400).json({ msg: 'Cannot add a recipe' });
     }
 
-    const { _id, name, ingredients, categoryId, userId, directions } = newRecipe;
+    const { _id, name, ingredients, categoryId, userId, directions, updatedAt } = newRecipe;
 
-    res.status(200).json({ _id, name, ingredients, categoryId, userId, directions });
+    res.status(200).json({ _id, name, ingredients, categoryId, userId, directions, updatedAt });
   } catch (e) {
     res.status(400).json({ msg: 'Failed to add recipe: ' + e });
   }
@@ -99,6 +99,8 @@ router.post('/update/:id', passport.authenticate('user', { session: false }), up
       return res.status(400).json({ msg: 'Recipe not found' });
     }
 
+    const timestamp = Date.now().toFixed();
+
     const createdRecipe = Recipe.createRecipe(
         data.name,
         data.userId,
@@ -107,6 +109,7 @@ router.post('/update/:id', passport.authenticate('user', { session: false }), up
         data.directions,
         data.photo,
         data.id,
+        timestamp
     );
 
     const newRecipe = await Recipe.updateRecipe(createdRecipe);
@@ -115,9 +118,9 @@ router.post('/update/:id', passport.authenticate('user', { session: false }), up
       return res.status(400).json({ msg: 'Cannot update a recipe' });
     }
 
-    const { _id, name, ingredients, categoryId, userId, directions } = newRecipe;
+    const { _id, name, ingredients, categoryId, userId, directions, updatedAt } = newRecipe;
 
-    res.status(200).json({ _id, name, ingredients, categoryId, userId, directions });
+    res.status(200).json({ _id, name, ingredients, categoryId, userId, directions, updatedAt });
   } catch (e) {
     res.status(400).json({ msg: 'Failed to update recipe: ' + e });
   }
