@@ -1,43 +1,44 @@
 const mongoose = require('mongoose');
 const fs = require('fs');
 
-const RecipeSchema = mongoose.Schema(
-  {
+const RecipeSchema = mongoose.Schema({
     name: {
-      type: String,
-      required: true
+        type: String,
+        required: true
     },
     userId: {
-      type: String,
-      required: true
+        type: String,
+        required: true
     },
     categoryId: {
-      type: String,
-      required: true
+        type: String,
+        required: true
     },
     photo: {
-      data: Buffer,
-      contentType: String,
-      originalName: String,
-      size: Number
+        data: Buffer,
+        contentType: String,
+        originalName: String,
+        size: Number
     },
     ingredients: {
         type: Array,
         required: true
     },
     directions: {
-      type: String,
-      required: true
+        type: String,
+        required: true
+    },
+    updatedAt: {
+        type: Number,
+        required: true
     }
-  },
-  { collection: process.env.DB_PREFIX + 'recipes' }
-);
+}, { collection: process.env.DB_PREFIX + 'recipes' });
 
 const Recipe = mongoose.model('Recipe', RecipeSchema);
 
 const getRecipeById = (id) => Recipe.findById(id);
 
-const getRecipeByCategoryId = (categoryId) => Recipe.find({ categoryId }, '_id name userId ingredients categoryId directions');
+const getRecipeByCategoryId = (categoryId) => Recipe.find({ categoryId }, '_id name userId ingredients categoryId directions updatedAt');
 
 const getRecipeByName = (name) => Recipe.findOne({ name });
 
@@ -62,7 +63,7 @@ const addRecipe = (newRecipe) => Recipe.create(newRecipe);
 
 const removeRecipe = (_id) => Recipe.remove({ _id });
 
-const createRecipe = (name, userId, categoryId, ingredients, directions, file, _id) => {
+const createRecipe = (name, userId, categoryId, ingredients, directions, file, _id, updatedAt) => {
     try {
         const newRecipe = new Recipe({
             name,
@@ -70,7 +71,8 @@ const createRecipe = (name, userId, categoryId, ingredients, directions, file, _
             categoryId,
             ingredients,
             directions,
-            _id
+            _id,
+            updatedAt
         });
 
         if (file) {

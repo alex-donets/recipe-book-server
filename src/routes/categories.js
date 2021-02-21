@@ -24,7 +24,7 @@ router.get(
   }
 );
 
-router.get('/get/photo/:id', async(req, res) => {
+router.get('/get/photo/:id/:timestamp', async(req, res) => {
   try {
     const id = sanitize(req.params.id);
     const photo = await Category.getCategoryPhotoById(id);
@@ -63,9 +63,9 @@ router.post('/add', passport.authenticate('admin', { session: false }), upload.s
       return res.status(400).json({ msg: 'Cannot create a category' });
     }
 
-    const { _id, name } = newCategory;
+    const { _id, name, updatedAt } = newCategory;
 
-    res.status(200).json({ _id, name });
+    res.status(200).json({ _id, name, updatedAt });
   } catch (e) {
     res.status(400).json({ msg: 'Failed to add category: ' + e });
   }
@@ -99,8 +99,8 @@ router.post('/update/:id', passport.authenticate('admin', { session: false }), u
       return res.status(400).json({ msg: 'Cannot update a category' });
     }
 
-    const { _id, photo, name } = updatedCategory;
-    res.status(200).json({ _id, photo, name });
+    const { _id, photo, name, updatedAt } = updatedCategory;
+    res.status(200).json({ _id, photo, name, updatedAt });
 
   } catch (e) {
     res.status(400).json({ msg: 'Cannot update a category: ' + e });

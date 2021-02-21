@@ -2,24 +2,29 @@ const mongoose = require('mongoose');
 const fs = require('fs');
 
 const CategorySchema = mongoose.Schema(
-  {
-    name: {
-      type: String,
-      required: true
+    {
+        name: {
+            type: String,
+            required: true
+        },
+        updatedAt: {
+            type: Number,
+            required: true
+        },
+        photo: {
+            data: Buffer,
+            contentType: String,
+            originalName: String,
+            size: Number,
+            timestamp: Number
+        }
     },
-    photo: {
-      data: Buffer,
-      contentType: String,
-      originalName: String,
-      size: Number
-    }
-  },
-  { collection: process.env.DB_PREFIX + 'categories' }
+    { collection: process.env.DB_PREFIX + 'categories' }
 );
 
 const Category = mongoose.model('Category', CategorySchema);
 
-const getAllCategories = () => Category.find({}, 'name');
+const getAllCategories = () => Category.find({}, 'name updatedAt');
 
 const getCategoryById = (id) => Category.findById(id);
 
@@ -50,7 +55,8 @@ const createCategory = (name, file, id) => {
     try {
         const newCategory = new Category({
             name: name,
-            _id: id
+            _id: id,
+            updatedAt: Date.now().toFixed()
         });
 
         if (file) {
