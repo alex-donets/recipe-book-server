@@ -63,8 +63,10 @@ const addRecipe = (newRecipe) => Recipe.create(newRecipe);
 
 const removeRecipe = (_id) => Recipe.remove({ _id });
 
-const createRecipe = (name, userId, categoryId, ingredients, directions, file, _id, updatedAt) => {
+const createRecipe = (name, userId, categoryId, ingredients, directions, file, _id) => {
     try {
+        const timestamp = Date.now().toFixed();
+
         const newRecipe = new Recipe({
             name,
             userId,
@@ -72,7 +74,7 @@ const createRecipe = (name, userId, categoryId, ingredients, directions, file, _
             ingredients,
             directions,
             _id,
-            updatedAt
+            updatedAt: timestamp
         });
 
         if (file) {

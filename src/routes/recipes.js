@@ -47,7 +47,6 @@ router.post('/add', passport.authenticate('user', { session: false }), upload.si
 
     await addValidationSchema.isValid(data);
 
-
     const existedRecipe = await Recipe.getRecipeByName(data.name);
 
     if (existedRecipe) {
